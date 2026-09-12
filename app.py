@@ -2090,15 +2090,11 @@ def show_results():
 
     except Exception as error:
 
-        st.error(
-            "⚠️ The PDF report could not be generated."
-        )
+        else:
 
-        st.caption(
-            "Please try again. If the problem continues, "
-            "check the application terminal for the error."
-        )
-
+            st.error(
+                f"⚠️ RAW ERROR DETAILS: {str(error)}"
+            )
     # --------------------------------------------------------
     # ACTION BUTTONS
     # --------------------------------------------------------
