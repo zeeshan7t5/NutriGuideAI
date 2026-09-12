@@ -1,5 +1,6 @@
 streamlit
-google-genai
 python-dotenv
-reportlab
 groq
+reportlab
+streamlit-lottie
+requests
