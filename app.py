@@ -76,6 +76,8 @@ DEFAULT_STATE = {
     "safety_result": {},
     "guidance": {},
     "workflow_context": {},
+    "wizard_step": 0,
+    "wizard_data": {},
 }
 
 for key, value in DEFAULT_STATE.items():
@@ -327,6 +329,90 @@ def generate_ai_response(prompt, retries=3):
             raise RuntimeError(f"RAW_ERROR: {error_message}") from error
 
     raise RuntimeError("RAW_ERROR: Max retries exceeded")
+
+
+def show_ai_error(error):
+    """Display a friendly message for a known AI/workflow error code."""
+
+    error_code = str(error)
+
+    if error_code == "INVALID_API_KEY":
+
+        st.error("🔑 Your Groq API key is invalid or not authorised.")
+        st.info(
+            "Please check GROQ_API_KEY in your Streamlit "
+            "Secrets and try again."
+        )
+
+    elif error_code == "API_QUOTA_EXCEEDED":
+
+        st.warning("⏳ Groq API rate limit or quota has been reached.")
+        st.info("Please wait a moment and try again later.")
+
+    elif error_code == "GROQ_TEMPORARILY_UNAVAILABLE":
+
+        st.warning("🔄 Groq service is temporarily unavailable.")
+        st.info("Please wait a few moments and try again.")
+
+    elif error_code == "INVALID_JSON":
+
+        st.error("📄 The AI returned an unexpected response format.")
+        st.info("Please try generating the guidance again.")
+
+    else:
+
+        st.error(f"⚠️ RAW ERROR DETAILS: {str(error)}")
+
+
+def regenerate_meal_ideas(meal_label, meal_key, existing_ideas):
+    """Ask the Guidance Agent for a fresh batch of ideas for one meal type."""
+
+    user_data = st.session_state.get("user_data", {})
+    assessment = st.session_state.get("assessment", {})
+    safety_result = st.session_state.get("safety_result", {})
+
+    prompt = f"""
+You are the Nutrition Guidance Agent for NutriGuide AI.
+
+Generate 4 NEW general {meal_label} ideas for this user, different
+from the ideas already given below.
+
+USER INFORMATION:
+{json.dumps(user_data, indent=2)}
+
+ASSESSMENT:
+{json.dumps(assessment, indent=2)}
+
+SAFETY CHECK:
+{json.dumps(safety_result, indent=2)}
+
+IDEAS ALREADY GIVEN (do not repeat these):
+{json.dumps(existing_ideas, indent=2)}
+
+IMPORTANT RULES:
+- This is general nutrition education, not medical advice.
+- Do not diagnose, prescribe treatment diets, or give calorie or
+  weight targets.
+- Respect all allergies and foods the user avoids.
+- Respect dietary preferences.
+- Use practical, familiar and culturally appropriate foods.
+
+Return ONLY valid JSON in exactly this structure:
+
+{{
+  "{meal_key}": [
+    "Idea 1",
+    "Idea 2",
+    "Idea 3",
+    "Idea 4"
+  ]
+}}
+"""
+
+    text = generate_ai_response(prompt)
+    result = clean_json_response(text)
+
+    return result.get(meal_key, [])
 
 
 def display_list_items(
@@ -1170,175 +1256,18 @@ def show_home():
 # NUTRITION ASSESSMENT PAGE
 # ============================================================
 
-def show_assessment():
+def run_ai_workflow(user_data):
+    """Run the 3-stage AI workflow: assessment, safety check, guidance."""
 
-    st.title("📝 Nutrition Assessment")
+    try:
 
-    st.write(
-        "Tell us a little about your nutrition preferences and "
-        "goals. This information will be used to prepare general "
-        "personalised guidance."
-    )
+        # =================================================
+        # STAGE 1 - ASSESSMENT
+        # =================================================
 
-    st.divider()
+        with st.spinner("🧠 Analysing your information..."):
 
-    with st.form(
-        "nutrition_assessment_form"
-    ):
-
-        st.subheader("👤 Basic Information")
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-
-            age_group = st.selectbox(
-                "Age Group",
-                [
-                    "Under 18",
-                    "18–30",
-                    "31–45",
-                    "46–60",
-                    "60+",
-                ],
-            )
-
-        with col2:
-
-            activity_level = st.selectbox(
-                "Activity Level",
-                [
-                    "Low",
-                    "Moderate",
-                    "High",
-                ],
-            )
-
-        st.subheader("🥗 Dietary Preferences")
-
-        dietary_preference = st.selectbox(
-            "Dietary Preference",
-            [
-                "No specific preference",
-                "Vegetarian",
-                "Vegan",
-                "Other",
-            ],
-        )
-
-        dietary_other = ""
-
-        if dietary_preference == "Other":
-
-            dietary_other = st.text_input(
-                "Please describe your dietary preference"
-            )
-
-        food_allergies = st.text_area(
-            "Food Allergies",
-            placeholder="Example: peanuts, eggs, milk",
-        )
-
-        foods_to_avoid = st.text_area(
-            "Foods You Avoid",
-            placeholder=(
-                "Example: very spicy food, certain vegetables"
-            ),
-        )
-
-        favourite_foods = st.text_area(
-            "Favourite / Available Foods",
-            placeholder=(
-                "Example: rice, roti, chicken, vegetables, "
-                "fruit, yoghurt"
-            ),
-        )
-
-        st.subheader("🎯 Your Goal")
-
-        goal = st.selectbox(
-            "What would you like help with?",
-            [
-                "Healthy eating",
-                "Fitness / active lifestyle",
-                "Better meal variety",
-                "Healthy lifestyle",
-                "General health concern",
-                "Other",
-            ],
-        )
-
-        other_goal = ""
-
-        if goal == "Other":
-
-            other_goal = st.text_input(
-                "Please describe your goal"
-            )
-
-        health_information = st.text_area(
-            "Health Information / Concerns",
-            placeholder=(
-                "Optional. Mention any health concern you want "
-                "the AI to consider."
-            ),
-        )
-
-        st.divider()
-
-        submitted = st.form_submit_button(
-            "🧠 Generate Nutrition Guidance",
-            type="primary",
-            use_container_width=True,
-        )
-
-    if submitted:
-
-        actual_preference = dietary_preference
-
-        if (
-            dietary_preference == "Other"
-            and dietary_other.strip()
-        ):
-
-            actual_preference = (
-                dietary_other.strip()
-            )
-
-        actual_goal = goal
-
-        if goal == "Other" and other_goal.strip():
-
-            actual_goal = other_goal.strip()
-
-        user_data = {
-            "age_group": age_group,
-            "activity_level": activity_level,
-            "dietary_preference": actual_preference,
-            "food_allergies": food_allergies.strip(),
-            "foods_to_avoid": foods_to_avoid.strip(),
-            "favourite_foods": favourite_foods.strip(),
-            "goal": actual_goal,
-            "health_information": health_information.strip(),
-        }
-
-        st.session_state.user_data = user_data
-
-        # ----------------------------------------------------
-        # AI WORKFLOW
-        # ----------------------------------------------------
-
-        try:
-
-            # =================================================
-            # STAGE 1 - ASSESSMENT
-            # =================================================
-
-            with st.spinner(
-                "🧠 Analysing your information..."
-            ):
-
-                assessment_prompt = f"""
+            assessment_prompt = f"""
 You are the Assessment Agent for NutriGuide AI.
 
 Your job is to analyse the user's nutrition information and
@@ -1390,25 +1319,19 @@ PLAN TYPE RULES:
 - Do NOT create a fixed 7-day or 30-day plan.
 """
 
-                assessment_text = generate_ai_response(
-                    assessment_prompt
-                )
+            assessment_text = generate_ai_response(assessment_prompt)
 
-                assessment = clean_json_response(
-                    assessment_text
-                )
+            assessment = clean_json_response(assessment_text)
 
-                st.session_state.assessment = assessment
+            st.session_state.assessment = assessment
 
-            # =================================================
-            # STAGE 2 - SAFETY CHECK
-            # =================================================
+        # =================================================
+        # STAGE 2 - SAFETY CHECK
+        # =================================================
 
-            with st.spinner(
-                "🛡️ Checking your dietary needs..."
-            ):
+        with st.spinner("🛡️ Checking your dietary needs..."):
 
-                safety_prompt = f"""
+            safety_prompt = f"""
 You are the Safety Agent for NutriGuide AI.
 
 Review the user's information and the Assessment Agent's
@@ -1458,27 +1381,19 @@ STATUS OPTIONS:
 - "professional_review_recommended"
 """
 
-                safety_text = generate_ai_response(
-                    safety_prompt
-                )
+            safety_text = generate_ai_response(safety_prompt)
 
-                safety_result = clean_json_response(
-                    safety_text
-                )
+            safety_result = clean_json_response(safety_text)
 
-                st.session_state.safety_result = (
-                    safety_result
-                )
+            st.session_state.safety_result = safety_result
 
-            # =================================================
-            # STAGE 3 - NUTRITION GUIDANCE
-            # =================================================
+        # =================================================
+        # STAGE 3 - NUTRITION GUIDANCE
+        # =================================================
 
-            with st.spinner(
-                "🍽️ Preparing your nutrition guidance..."
-            ):
+        with st.spinner("🍽️ Preparing your nutrition guidance..."):
 
-                guidance_prompt = f"""
+            guidance_prompt = f"""
 You are the Nutrition Guidance Agent for NutriGuide AI.
 
 Create personalised GENERAL nutrition guidance using the
@@ -1562,94 +1477,331 @@ Use exactly this structure:
 }}
 """
 
-                guidance_text = generate_ai_response(
-                    guidance_prompt
-                )
+            guidance_text = generate_ai_response(guidance_prompt)
 
-                guidance = clean_json_response(
-                    guidance_text
-                )
+            guidance = clean_json_response(guidance_text)
 
-                st.session_state.guidance = guidance
+            st.session_state.guidance = guidance
 
-            # ------------------------------------------------
-            # SAVE WORKFLOW CONTEXT
-            # ------------------------------------------------
+        # ------------------------------------------------
+        # SAVE WORKFLOW CONTEXT
+        # ------------------------------------------------
 
-            st.session_state.workflow_context = {
-                "user_data": user_data,
-                "assessment": assessment,
-                "safety_result": safety_result,
-                "guidance": guidance,
-            }
+        st.session_state.workflow_context = {
+            "user_data": user_data,
+            "assessment": assessment,
+            "safety_result": safety_result,
+            "guidance": guidance,
+        }
 
-            st.session_state.page = "results"
+        st.session_state.page = "results"
+
+        st.rerun()
+
+    except Exception as error:
+
+        show_ai_error(error)
+
+        st.divider()
+
+        if st.button(
+            "⬅️ Back to Home",
+            key="assessment_error_back_home",
+        ):
+
+            reset_app()
+
+            st.session_state.page = "home"
 
             st.rerun()
 
-        except Exception as error:
 
-            error_code = str(error)
+WIZARD_STEPS = ["Basic Info", "Preferences", "Goals & Health"]
 
-            if error_code == "INVALID_API_KEY":
 
-                st.error(
-                    "🔑 Your Groq API key is invalid or not authorised."
-                )
+def show_wizard_progress(current):
+    """Render a progress bar + step labels for the assessment wizard."""
 
-                st.info(
-                    "Please check GROQ_API_KEY in your Streamlit "
-                    "Secrets and try again."
-                )
+    st.progress((current + 1) / len(WIZARD_STEPS))
 
-            elif error_code == "API_QUOTA_EXCEEDED":
+    cols = st.columns(len(WIZARD_STEPS))
 
-                st.warning(
-                    "⏳ Groq API rate limit or quota has been reached."
-                )
+    for i, col in enumerate(cols):
 
-                st.info(
-                    "Please wait a moment and try again later."
-                )
+        with col:
 
-            elif error_code == "GROQ_TEMPORARILY_UNAVAILABLE":
-
-                st.warning(
-                    "🔄 Groq service is temporarily unavailable."
-                )
-
-                st.info(
-                    "Please wait a few moments and try again."
-                )
-
-            elif error_code == "INVALID_JSON":
-
-                st.error(
-                    "📄 The AI returned an unexpected response format."
-                )
-
-                st.info(
-                    "Please try generating the guidance again."
-                )
-
+            if i < current:
+                st.markdown(f"✅ **{WIZARD_STEPS[i]}**")
+            elif i == current:
+                st.markdown(f"🔵 **{WIZARD_STEPS[i]}**")
             else:
+                st.markdown(f"⚪ {WIZARD_STEPS[i]}")
 
-                st.error(
-                    f"⚠️ RAW ERROR DETAILS: {str(error)}"
-                )
 
-            st.divider()
+def show_assessment():
+
+    st.title("📝 Nutrition Assessment")
+
+    st.write(
+        "Tell us a little about your nutrition preferences and "
+        "goals. This information will be used to prepare general "
+        "personalised guidance."
+    )
+
+    st.divider()
+
+    current = st.session_state.wizard_step
+    data = st.session_state.wizard_data
+
+    show_wizard_progress(current)
+
+    st.divider()
+
+    # ==========================================================
+    # STEP 0 - BASIC INFO
+    # ==========================================================
+
+    if current == 0:
+
+        st.subheader("👤 Basic Information")
+
+        col1, col2 = st.columns(2)
+
+        age_options = [
+            "Under 18",
+            "18–30",
+            "31–45",
+            "46–60",
+            "60+",
+        ]
+
+        activity_options = ["Low", "Moderate", "High"]
+
+        with col1:
+
+            data["age_group"] = st.selectbox(
+                "Age Group",
+                age_options,
+                index=age_options.index(
+                    data.get("age_group", age_options[1])
+                ),
+            )
+
+        with col2:
+
+            data["activity_level"] = st.selectbox(
+                "Activity Level",
+                activity_options,
+                index=activity_options.index(
+                    data.get("activity_level", "Moderate")
+                ),
+            )
+
+        st.divider()
+
+        _, next_col = st.columns([3, 1])
+
+        with next_col:
 
             if st.button(
-                "⬅️ Back to Home",
-                key="assessment_error_back_home",
+                "Next ➡️",
+                type="primary",
+                use_container_width=True,
+                key="wizard_next_0",
             ):
 
-                reset_app()
-
-                st.session_state.page = "home"
-
+                st.session_state.wizard_step = 1
                 st.rerun()
+
+    # ==========================================================
+    # STEP 1 - DIETARY PREFERENCES
+    # ==========================================================
+
+    elif current == 1:
+
+        st.subheader("🥗 Dietary Preferences")
+
+        dietary_options = [
+            "No specific preference",
+            "Vegetarian",
+            "Vegan",
+            "Other",
+        ]
+
+        data["dietary_preference"] = st.selectbox(
+            "Dietary Preference",
+            dietary_options,
+            index=dietary_options.index(
+                data.get("dietary_preference", dietary_options[0])
+            ),
+        )
+
+        if data["dietary_preference"] == "Other":
+
+            data["dietary_other"] = st.text_input(
+                "Please describe your dietary preference",
+                value=data.get("dietary_other", ""),
+            )
+
+        data["food_allergies"] = st.text_area(
+            "Food Allergies",
+            value=data.get("food_allergies", ""),
+            placeholder="Example: peanuts, eggs, milk",
+        )
+
+        data["foods_to_avoid"] = st.text_area(
+            "Foods You Avoid",
+            value=data.get("foods_to_avoid", ""),
+            placeholder=(
+                "Example: very spicy food, certain vegetables"
+            ),
+        )
+
+        data["favourite_foods"] = st.text_area(
+            "Favourite / Available Foods",
+            value=data.get("favourite_foods", ""),
+            placeholder=(
+                "Example: rice, roti, chicken, vegetables, "
+                "fruit, yoghurt"
+            ),
+        )
+
+        st.divider()
+
+        back_col, next_col = st.columns(2)
+
+        with back_col:
+
+            if st.button(
+                "⬅️ Back",
+                use_container_width=True,
+                key="wizard_back_1",
+            ):
+
+                st.session_state.wizard_step = 0
+                st.rerun()
+
+        with next_col:
+
+            if st.button(
+                "Next ➡️",
+                type="primary",
+                use_container_width=True,
+                key="wizard_next_1",
+            ):
+
+                st.session_state.wizard_step = 2
+                st.rerun()
+
+    # ==========================================================
+    # STEP 2 - GOALS & HEALTH + SUBMIT
+    # ==========================================================
+
+    elif current == 2:
+
+        st.subheader("🎯 Your Goal")
+
+        goal_options = [
+            "Healthy eating",
+            "Fitness / active lifestyle",
+            "Better meal variety",
+            "Healthy lifestyle",
+            "General health concern",
+            "Other",
+        ]
+
+        data["goal"] = st.selectbox(
+            "What would you like help with?",
+            goal_options,
+            index=goal_options.index(
+                data.get("goal", goal_options[0])
+            ),
+        )
+
+        if data["goal"] == "Other":
+
+            data["other_goal"] = st.text_input(
+                "Please describe your goal",
+                value=data.get("other_goal", ""),
+            )
+
+        data["health_information"] = st.text_area(
+            "Health Information / Concerns",
+            value=data.get("health_information", ""),
+            placeholder=(
+                "Optional. Mention any health concern you want "
+                "the AI to consider."
+            ),
+        )
+
+        st.divider()
+
+        back_col, submit_col = st.columns(2)
+
+        with back_col:
+
+            if st.button(
+                "⬅️ Back",
+                use_container_width=True,
+                key="wizard_back_2",
+            ):
+
+                st.session_state.wizard_step = 1
+                st.rerun()
+
+        with submit_col:
+
+            submitted = st.button(
+                "🧠 Generate Nutrition Guidance",
+                type="primary",
+                use_container_width=True,
+                key="wizard_submit",
+            )
+
+        if submitted:
+
+            actual_preference = data.get(
+                "dietary_preference", "No specific preference"
+            )
+
+            if (
+                actual_preference == "Other"
+                and data.get("dietary_other", "").strip()
+            ):
+
+                actual_preference = data["dietary_other"].strip()
+
+            actual_goal = data.get("goal", "Healthy eating")
+
+            if (
+                actual_goal == "Other"
+                and data.get("other_goal", "").strip()
+            ):
+
+                actual_goal = data["other_goal"].strip()
+
+            user_data = {
+                "age_group": data.get("age_group", ""),
+                "activity_level": data.get("activity_level", ""),
+                "dietary_preference": actual_preference,
+                "food_allergies": data.get(
+                    "food_allergies", ""
+                ).strip(),
+                "foods_to_avoid": data.get(
+                    "foods_to_avoid", ""
+                ).strip(),
+                "favourite_foods": data.get(
+                    "favourite_foods", ""
+                ).strip(),
+                "goal": actual_goal,
+                "health_information": data.get(
+                    "health_information", ""
+                ).strip(),
+            }
+
+            st.session_state.user_data = user_data
+
+            run_ai_workflow(user_data)
 
 
 # ============================================================
@@ -1949,69 +2101,67 @@ def show_results():
 
     st.subheader("🍽️ Meal Ideas")
 
-    breakfast_ideas = guidance.get(
-        "breakfast_ideas",
-        [],
-    )
+    meal_categories = [
+        ("breakfast_ideas", "breakfast", "🍳 Breakfast"),
+        ("lunch_ideas", "lunch", "🥗 Lunch"),
+        ("snack_ideas", "snack", "🍎 Snacks"),
+        ("dinner_ideas", "dinner", "🍽️ Dinner"),
+    ]
 
-    lunch_ideas = guidance.get(
-        "lunch_ideas",
-        [],
-    )
+    meal_tabs = st.tabs([label for _, _, label in meal_categories])
 
-    snack_ideas = guidance.get(
-        "snack_ideas",
-        [],
-    )
+    for tab, (guidance_key, meal_label, display_label) in zip(
+        meal_tabs, meal_categories
+    ):
 
-    dinner_ideas = guidance.get(
-        "dinner_ideas",
-        [],
-    )
+        with tab:
 
-    # Breakfast + Lunch
+            current_ideas = guidance.get(guidance_key, [])
 
-    col1, col2 = st.columns(2)
+            display_list_items(
+                current_ideas,
+                empty_message="No ideas available yet.",
+                card_style=True,
+            )
 
-    with col1:
+            if st.button(
+                f"🔄 Get different {meal_label} ideas",
+                key=f"regen_{meal_label}",
+                use_container_width=True,
+            ):
 
-        st.markdown("### 🍳 Breakfast")
+                with st.spinner(f"Finding new {meal_label} ideas..."):
 
-        display_list_items(
-            breakfast_ideas,
-            card_style=True,
-        )
+                    try:
 
-    with col2:
+                        new_ideas = regenerate_meal_ideas(
+                            display_label.split(" ", 1)[-1].lower(),
+                            guidance_key,
+                            current_ideas,
+                        )
 
-        st.markdown("### 🥗 Lunch")
+                        if new_ideas:
 
-        display_list_items(
-            lunch_ideas,
-            card_style=True,
-        )
+                            guidance[guidance_key] = new_ideas
 
-    # Snacks + Dinner
+                            st.session_state.guidance = guidance
 
-    col1, col2 = st.columns(2)
+                            st.session_state.workflow_context[
+                                "guidance"
+                            ] = guidance
 
-    with col1:
+                            st.rerun()
 
-        st.markdown("### 🍎 Snacks")
+                        else:
 
-        display_list_items(
-            snack_ideas,
-            card_style=True,
-        )
+                            st.warning(
+                                "Couldn't get new ideas this time — "
+                                "please try again."
+                            )
 
-    with col2:
+                    except Exception as error:
 
-        st.markdown("### 🍽️ Dinner")
-
-        display_list_items(
-            dinner_ideas,
-            card_style=True,
-        )
+                        show_ai_error(error)
 
     # --------------------------------------------------------
     # NUTRITION TIPS
