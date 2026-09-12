@@ -298,8 +298,7 @@ def show_home():
         </div>
         """,
         unsafe_allow_html=True,
-        )
-
+    )
 
 def clean_json_response(text):
     """Clean AI output and convert it into a Python dictionary."""
