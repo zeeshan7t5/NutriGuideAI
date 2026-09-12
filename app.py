@@ -62,7 +62,7 @@ if not API_KEY:
 
 client = Groq(api_key=API_KEY)
 
-MODEL_NAME = "llama3-8b-8192"
+MODEL_NAME = "openai/gpt-oss-120b"
 
 
 # ============================================================
