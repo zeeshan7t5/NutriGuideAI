@@ -1,8 +1,3 @@
-Here is the complete, updated `app.py` code with the syntax error fixed at the end of the file.
-
-Copy and paste this entire code directly into your `app.py` file on GitHub:
-
-```python
 import os
 import json
 import time
