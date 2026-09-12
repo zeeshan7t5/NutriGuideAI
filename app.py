@@ -203,12 +203,102 @@ st.markdown(
 # HELPER FUNCTIONS
 # ============================================================
 
-def load_lottieurl(url: str):
-    """Load a lottie animation from a URL."""
-    r = requests.get(url)
-    if r.status_code != 200:
-        return None
-    return r.json()
+def show_home():
+    st.title("🥗 NutriGuide AI")
+    st.subheader("Your AI-Powered Nutrition Assistant")
+    st.write("Get personalised general nutrition guidance based on your preferences, goals and dietary needs.")
+    st.info("💡 This app provides general nutrition guidance. For medical advice, consult a professional.")
+
+    st.divider()
+
+    st.subheader("✨ What you can get")
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.markdown(
+            """
+            <div class="feature-card">
+                <h3>🧠 Personalised Guidance</h3>
+                <p>Guidance based on your food preferences, activity level, goals and dietary needs.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with col2:
+        st.markdown(
+            """
+            <div class="feature-card">
+                <h3>🍽️ Meal Ideas</h3>
+                <p>Practical breakfast, lunch, snack and dinner ideas for everyday nutrition.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with col3:
+        st.markdown(
+            """
+            <div class="feature-card">
+                <h3>🛡️ Safety-Aware</h3>
+                <p>Allergies, dietary restrictions and health concerns are considered before guidance is generated.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    st.divider()
+
+    st.subheader("🚀 How it works")
+    step1, step2, step3 = st.columns(3)
+
+    with step1:
+        st.markdown(
+            """
+            <div class="step-card">
+                <h3>1️⃣ Tell us about yourself</h3>
+                <p>Share your basic dietary preferences, activity level, goals and food information.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with step2:
+        st.markdown(
+            """
+            <div class="step-card">
+                <h3>2️⃣ AI reviews your information</h3>
+                <p>NutriGuide AI analyses your information and checks important dietary considerations.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with step3:
+        st.markdown(
+            """
+            <div class="step-card">
+                <h3>3️⃣ Get your guidance</h3>
+                <p>Receive personalised meal ideas and practical general nutrition guidance.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    st.divider()
+
+    if st.button("🥗 Start Nutrition Assessment", type="primary", use_container_width=True, key="start_assessment_home"):
+        st.session_state.page = "assessment"
+        st.rerun()
+
+    st.markdown(
+        """
+        <div class="app-footer">
+            NutriGuide AI is for general educational nutrition guidance and is not a substitute for professional medical advice.
+        </div>
+        """,
+        unsafe_allow_html=True,
+        )
 
 
 def clean_json_response(text):
