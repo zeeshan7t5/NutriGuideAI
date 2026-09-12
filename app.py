@@ -8,7 +8,7 @@ from xml.sax.saxutils import escape
 
 import streamlit as st
 from dotenv import load_dotenv
-from google import genai
+from groq import Groq
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -42,31 +42,28 @@ st.set_page_config(
 load_dotenv()
 
 try:
-    API_KEY = st.secrets.get("GEMINI_API_KEY")
+    API_KEY = st.secrets.get("GROQ_API_KEY")
 except Exception:
     API_KEY = None
 
 if not API_KEY:
-    API_KEY = os.getenv("GEMINI_API_KEY")
+    API_KEY = os.getenv("GROQ_API_KEY")
 
 if API_KEY:
     API_KEY = API_KEY.strip()
 
 if not API_KEY:
-    st.error("🔑 Gemini API key is missing.")
-
+    st.error("🔑 Groq API key is missing.")
     st.info(
-        "For Streamlit Cloud, add GEMINI_API_KEY under "
+        "For Streamlit Cloud, add GROQ_API_KEY under "
         "Settings → Secrets. For local development, add it "
         "to your .env file."
     )
-
     st.stop()
 
+client = Groq(api_key=API_KEY)
 
-client = genai.Client(api_key=API_KEY)
-
-MODEL_NAME = "gemini-3.6-flash"
+MODEL_NAME = "openai/gpt-oss-120b"
 
 
 # ============================================================
