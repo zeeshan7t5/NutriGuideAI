@@ -1,9 +1,11 @@
 import os
 import json
 import time
+import unicodedata
 from io import BytesIO
 from datetime import datetime
 from xml.sax.saxutils import escape
+from urllib.request import urlopen
 
 import streamlit as st
 from dotenv import load_dotenv
@@ -20,6 +22,8 @@ from reportlab.platypus import (
     TableStyle,
 )
 from reportlab.lib import colors
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont, TTFError
 
 
 # ============================================================
@@ -823,25 +827,150 @@ def display_meal(meal, title):
             st.caption(f"Alternative: {meal['alternative']}")
 
 
+@st.cache_resource(show_spinner=False)
+def register_pdf_fonts():
+    registered = set(pdfmetrics.getRegisteredFontNames())
+    if "NutriGuideBody" not in registered:
+        pdfmetrics.registerFont(TTFont("NutriGuideBody", "Vera.ttf"))
+    if "NutriGuideBodyBold" not in registered:
+        pdfmetrics.registerFont(TTFont("NutriGuideBodyBold", "VeraBd.ttf"))
+    pdfmetrics.registerFontFamily(
+        "NutriGuideBody", normal="NutriGuideBody", bold="NutriGuideBodyBold",
+        italic="NutriGuideBody", boldItalic="NutriGuideBodyBold",
+    )
+    if "NutriGuideBrand" not in registered:
+        font_url = (
+            "https://raw.githubusercontent.com/floriankarsten/space-grotesk/"
+            "03507d024a01282884232081fc6011c09ff4e849/fonts/ttf/static/SpaceGrotesk-Bold.ttf"
+        )
+        try:
+            with urlopen(font_url, timeout=4) as response:
+                font_bytes = response.read(2_000_000)
+            pdfmetrics.registerFont(TTFont("NutriGuideBrand", BytesIO(font_bytes)))
+        except (OSError, ValueError, TTFError):
+            return "NutriGuideBodyBold"
+    return "NutriGuideBrand"
+
+
+def normalize_pdf_text(value):
+    text = unicodedata.normalize("NFKC", str(value if value is not None else "—"))
+    return text.translate(str.maketrans({
+        "\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2212": "-",
+        "\u2044": "/", "\u00a0": " ", "\u202f": " ",
+        "\u00ad": "", "\u200b": "", "\u2060": "", "\ufeff": "", "\ufe0f": "",
+    }))
+
+
+def draw_pdf_page_header(canvas, document):
+    page_width, page_height = document.pagesize
+    orange = colors.HexColor("#FF4400")
+    charcoal = colors.HexColor("#121212")
+    brand_font = register_pdf_fonts()
+    canvas.saveState()
+    canvas.setFillColor(charcoal)
+    canvas.rect(0, page_height - 68, page_width, 68, stroke=0, fill=1)
+    canvas.setFillColor(orange)
+    canvas.rect(0, page_height - 70, page_width, 2, stroke=0, fill=1)
+    canvas.roundRect(document.leftMargin, page_height - 48, 29, 29, 8, stroke=0, fill=1)
+    canvas.setFillColor(charcoal)
+    canvas.setFont(brand_font, 19)
+    canvas.drawCentredString(document.leftMargin + 14.5, page_height - 39, "n")
+    brand_start = document.leftMargin + 40
+    canvas.setFont(brand_font, 21)
+    canvas.setFillColor(colors.white)
+    canvas.drawString(brand_start, page_height - 40, "NutriGuide")
+    canvas.setFillColor(orange)
+    canvas.drawString(
+        brand_start + pdfmetrics.stringWidth("NutriGuide ", brand_font, 21),
+        page_height - 40, "AI",
+    )
+    canvas.setFillColor(colors.HexColor("#BDBDBD"))
+    canvas.setFont("NutriGuideBody", 7)
+    canvas.drawRightString(page_width - document.rightMargin, page_height - 36, "PERSONALIZED NUTRITION REPORT")
+    canvas.setStrokeColor(colors.HexColor("#E5E7EB"))
+    canvas.setLineWidth(0.5)
+    canvas.line(document.leftMargin, 36, page_width - document.rightMargin, 36)
+    canvas.setFillColor(colors.HexColor("#606975"))
+    canvas.setFont("NutriGuideBody", 8)
+    canvas.drawString(document.leftMargin, 23, "NutriGuide AI | Educational nutrition support")
+    canvas.drawRightString(page_width - document.rightMargin, 23, f"Page {document.page}")
+    canvas.restoreState()
+
+
 def create_pdf_report(user_data, assessment, safety_result, nutrition, guidance):
+    register_pdf_fonts()
     buffer = BytesIO()
     document = SimpleDocTemplate(
-        buffer, pagesize=A4, rightMargin=35, leftMargin=35, topMargin=35, bottomMargin=35
+        buffer, pagesize=A4, rightMargin=38, leftMargin=38, topMargin=94, bottomMargin=52,
+        title="NutriGuide AI - Personalized Nutrition Report", author="NutriGuide AI",
     )
     styles = getSampleStyleSheet()
-    title_style = ParagraphStyle("ReportTitle", parent=styles["Title"], alignment=TA_CENTER, fontSize=19, spaceAfter=16)
-    heading_style = ParagraphStyle("ReportHeading", parent=styles["Heading2"], fontSize=13, spaceBefore=10, spaceAfter=6)
-    body_style = ParagraphStyle("ReportBody", parent=styles["BodyText"], fontSize=9, leading=12, spaceAfter=4)
+    ink = colors.HexColor("#242424")
+    muted = colors.HexColor("#606975")
+    accent = colors.HexColor("#B8380A")
+    soft_orange = colors.HexColor("#FFF1E8")
+    body_style = ParagraphStyle(
+        "ReportBody", parent=styles["BodyText"], fontName="NutriGuideBody",
+        fontSize=9, leading=14, textColor=ink, spaceAfter=6, allowWidows=0, allowOrphans=0,
+    )
+    title_style = ParagraphStyle(
+        "ReportTitle", parent=body_style, fontName="NutriGuideBodyBold",
+        alignment=TA_CENTER, fontSize=20, leading=26, spaceAfter=8,
+    )
+    subtitle_style = ParagraphStyle(
+        "ReportSubtitle", parent=body_style, alignment=TA_CENTER,
+        fontSize=8, textColor=muted, spaceAfter=16,
+    )
+    heading_style = ParagraphStyle(
+        "ReportHeading", parent=body_style, fontName="NutriGuideBodyBold",
+        fontSize=12, leading=17, textColor=accent, backColor=soft_orange,
+        borderPadding=8, spaceBefore=18, spaceAfter=12, keepWithNext=True,
+    )
+    day_style = ParagraphStyle(
+        "ReportDay", parent=body_style, fontName="NutriGuideBodyBold",
+        fontSize=11, leading=16, textColor=accent, backColor=soft_orange,
+        borderPadding=6, spaceBefore=12, spaceAfter=10, keepWithNext=True,
+    )
+    meal_label_style = ParagraphStyle(
+        "ReportMealLabel", parent=body_style, fontName="NutriGuideBodyBold",
+        textColor=accent, spaceBefore=5, spaceAfter=3, keepWithNext=True,
+    )
+    small_style = ParagraphStyle("ReportSmall", parent=body_style, fontSize=8, leading=12, textColor=muted)
+    table_style = ParagraphStyle("ReportTableCell", parent=body_style, spaceAfter=0, fontSize=8.5, leading=12)
+    table_header_style = ParagraphStyle(
+        "ReportTableHeader", parent=table_style, fontName="NutriGuideBodyBold", textColor=colors.white,
+    )
+    notice_style = ParagraphStyle(
+        "ReportNotice", parent=body_style, backColor=colors.HexColor("#FFF5DE"),
+        borderColor=colors.HexColor("#EDC67A"), borderWidth=0.5,
+        borderPadding=9, spaceBefore=6, spaceAfter=12,
+    )
 
-    def p(v):
-        return escape(str(v if v is not None else "—")).replace("\n", "<br/>")
+    def pdf_markup(value):
+        return escape(normalize_pdf_text(value)).replace("\n", "<br/>")
+
+    def report_table(headers, rows):
+        cells = [[Paragraph(pdf_markup(value), table_header_style) for value in headers]]
+        cells.extend([[Paragraph(pdf_markup(value), table_style) for value in row] for row in rows])
+        table = Table(cells, colWidths=[125, document.width - 125], repeatRows=1, hAlign="LEFT")
+        table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#242424")),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#FFF8F3")]),
+            ("LINEBELOW", (0, 0), (-1, 0), 2, colors.HexColor("#FF4400")),
+            ("LINEBELOW", (0, 1), (-1, -1), 0.4, colors.HexColor("#E8E3DF")),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 9),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 9),
+            ("TOPPADDING", (0, 0), (-1, -1), 7),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+        ]))
+        return table
 
     story = [
-        Paragraph("NutriGuide AI — Personalized Nutrition Report", title_style),
-        Paragraph(datetime.now().strftime("Generated: %d %B %Y, %H:%M"), body_style),
-        Paragraph("1. User Profile", heading_style),
+        Paragraph("Your personalized nutrition plan", title_style),
+        Paragraph(datetime.now().strftime("Generated: %d %B %Y, %H:%M"), subtitle_style),
+        Paragraph("1. Your profile", heading_style),
     ]
-
     profile = [
         ["Age", user_data.get("age")],
         ["Sex", user_data.get("sex")],
@@ -855,62 +984,53 @@ def create_pdf_report(user_data, assessment, safety_result, nutrition, guidance)
         ["Conditions", ", ".join(user_data.get("medical_conditions", [])) or "None reported"],
         ["Medications", ", ".join(user_data.get("medication_names", [])) or "None reported"],
     ]
-    table = Table([["Information", "Details"]] + [[p(a), p(b)] for a, b in profile], colWidths=[130, 365])
-    table.setStyle(TableStyle([
-        ("BACKGROUND", (0,0), (-1,0), colors.lightgrey),
-        ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
-        ("GRID", (0,0), (-1,-1), 0.4, colors.grey),
-        ("VALIGN", (0,0), (-1,-1), "TOP"),
-        ("PADDING", (0,0), (-1,-1), 5),
-    ]))
-    story.append(table)
-
-    story += [
-        Paragraph("2. Nutritional Analysis", heading_style),
-        Paragraph(f"BMR: {nutrition.get('bmr_kcal')} kcal/day", body_style),
-        Paragraph(f"TDEE: {nutrition.get('tdee_kcal')} kcal/day", body_style),
-        Paragraph(
-            f"Estimated calorie target: {nutrition.get('target_calories_kcal') or 'Not provided due to health-safety context'}",
-            body_style,
-        ),
-        Paragraph(
-            f"Macro targets: Protein {nutrition.get('protein_g') or '—'} g · "
-            f"Carbohydrates {nutrition.get('carbohydrate_g') or '—'} g · "
-            f"Fat {nutrition.get('fat_g') or '—'} g",
-            body_style,
-        ),
-        Paragraph("3. Safety & Health Context", heading_style),
-        Paragraph(p(safety_result.get("status")), body_style),
-        Paragraph(p(assessment.get("health_context_summary", "")), body_style),
+    story.append(report_table(["Information", "Details"], profile))
+    story.append(Paragraph("2. Nutritional analysis", heading_style))
+    analysis_rows = [
+        ["BMR", f"{nutrition.get('bmr_kcal')} kcal/day"],
+        ["TDEE", f"{nutrition.get('tdee_kcal')} kcal/day"],
+        ["Calorie target", f"{nutrition['target_calories_kcal']} kcal/day" if nutrition.get("target_calories_kcal") else "Not provided due to health-safety context"],
+        ["Protein", f"{nutrition.get('protein_g') or '—'} g/day"],
+        ["Carbohydrates", f"{nutrition.get('carbohydrate_g') or '—'} g/day"],
+        ["Fat", f"{nutrition.get('fat_g') or '—'} g/day"],
     ]
+    story.append(report_table(["Metric", "Daily estimate"], analysis_rows))
+    story.append(Paragraph("3. Safety &amp; health context", heading_style))
+    status = normalize_pdf_text(safety_result.get("status")).replace("_", " ").capitalize()
+    story.append(Paragraph(pdf_markup(status), notice_style))
+    story.append(Paragraph(pdf_markup(assessment.get("health_context_summary", "")), body_style))
+    for item in safety_result.get("safety_flags", []):
+        story.append(Paragraph("• " + pdf_markup(item), body_style))
 
-    if safety_result.get("safety_flags"):
-        for item in safety_result["safety_flags"]:
-            story.append(Paragraph("• " + p(item), body_style))
-
-    story.append(Paragraph("4. Personalized Meal Plan", heading_style))
+    story.append(Paragraph("4. Your personalized meal plan", heading_style))
     for day in guidance.get("days", []):
-        story.append(Paragraph(f"<b>Day {p(day.get('day'))}</b>", body_style))
-        for key in ["breakfast", "lunch", "snack", "dinner"]:
-            meal = day.get(key, {})
+        story.append(Paragraph(f"Day {pdf_markup(day.get('day'))}", day_style))
+        for meal_key in ["breakfast", "lunch", "snack", "dinner"]:
+            meal = day.get(meal_key) or {}
+            if not isinstance(meal, dict):
+                meal = {"meal": str(meal)}
+            story.append(Paragraph(meal_key.title(), meal_label_style))
+            story.append(Paragraph(pdf_markup(meal.get("meal", "—")), body_style))
             story.append(Paragraph(
-                f"<b>{key.title()}:</b> {p(meal.get('meal', '—'))} "
-                f"({p(meal.get('calories', '—'))} kcal; P {p(meal.get('protein_g', '—'))} g; "
-                f"C {p(meal.get('carbs_g', '—'))} g; F {p(meal.get('fat_g', '—'))} g). "
-                f"Alternative: {p(meal.get('alternative', '—'))}",
-                body_style
+                f"<b>{pdf_markup(meal.get('calories', '—'))} kcal</b> &nbsp; | &nbsp; "
+                f"Protein {pdf_markup(meal.get('protein_g', '—'))} g &nbsp; | &nbsp; "
+                f"Carbs {pdf_markup(meal.get('carbs_g', '—'))} g &nbsp; | &nbsp; "
+                f"Fat {pdf_markup(meal.get('fat_g', '—'))} g",
+                small_style,
             ))
+            story.append(Paragraph(f"<b>Alternative:</b> {pdf_markup(meal.get('alternative', '—'))}", small_style))
+            story.append(Spacer(1, 5))
 
-    story += [
+    story.extend([
         Paragraph("Safety disclaimer", heading_style),
         Paragraph(
             "NutriGuide AI provides educational nutrition support and estimates. It is not a "
             "replacement for a physician, pharmacist, registered dietitian, or other qualified "
             "healthcare professional. Never start, stop, or change medication based on this report.",
-            body_style,
+            notice_style,
         ),
-    ]
-    document.build(story)
+    ])
+    document.build(story, onFirstPage=draw_pdf_page_header, onLaterPages=draw_pdf_page_header)
     buffer.seek(0)
     return buffer.getvalue()
 
