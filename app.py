@@ -127,20 +127,9 @@ st.markdown(
             background-color: var(--paper);
             background-image:none;
         }
-        header[data-testid="stHeader"] { background:var(--paper) !important; color:var(--ink) !important; border-bottom:1px solid var(--line); }
-        header[data-testid="stHeader"] :is(button, a) { background:var(--surface-raised) !important; color:var(--ink) !important; border:1px solid var(--control-line) !important; border-radius:8px; min-width:40px; min-height:40px; opacity:1; }
-        header[data-testid="stHeader"] :is(button, a) :is(span, p, div), header[data-testid="stHeader"] [data-testid="stIconMaterial"] { color:inherit !important; }
-        header[data-testid="stHeader"] svg { color:inherit !important; }
-        header[data-testid="stHeader"] svg:not([fill="none"]), header[data-testid="stHeader"] svg [fill]:not([fill="none"]) { fill:currentColor !important; }
-        header[data-testid="stHeader"] svg [stroke]:not([stroke="none"]) { stroke:currentColor !important; }
-        header[data-testid="stHeader"] [data-testid="stToolbarActionButtonIcon"] { filter:brightness(0) invert(1); }
-        header[data-testid="stHeader"] :is(button, a):hover:not(:disabled) { background:var(--mint) !important; color:var(--leaf-soft) !important; border-color:var(--leaf) !important; }
-        header[data-testid="stHeader"] :is(button, a):focus-visible { outline:3px solid var(--leaf-soft) !important; outline-offset:3px; }
-        header[data-testid="stHeader"] button:disabled { color:var(--muted) !important; cursor:not-allowed; }
-        [data-testid="stToolbarActions"] { gap:.5rem; }
-        #MainMenu { visibility:visible; }
+        header[data-testid="stHeader"], [data-testid="stToolbar"], #MainMenu { display:none !important; }
         footer { visibility:hidden; }
-        .block-container { max-width: 1180px; padding: 6rem 2rem 4rem; position: relative; }
+        .block-container { max-width: 1180px; padding: 2.25rem 2rem 4rem; position: relative; }
         h1, h2, h3, h4, h5, h6 { font-family: "Space Grotesk", sans-serif; color: var(--ink); letter-spacing: 0; }
         h1 { font-size: clamp(2rem, 4vw, 3.25rem); line-height: 1.08; font-weight: 700; }
         h2, h3 { font-weight: 600; }
@@ -248,7 +237,7 @@ st.markdown(
         .hero-panel, div[data-testid="stMetric"] { animation:ng-fade .5s ease both; }
         @media (prefers-reduced-motion:reduce) { *, *::before, *::after { animation:none !important; transition:none !important; } }
         @media (max-width:760px) {
-            .block-container { padding:5.5rem 1rem 3rem; }
+            .block-container { padding:1.2rem 1rem 3rem; }
             .hero-grid { grid-template-columns:1fr; }
             .brandbar { align-items:flex-start; }
             .status-chip { display:none; }
@@ -566,18 +555,58 @@ def assess_health_safety(user_data):
     }
 
 
-def validate_user_data(data):
-    errors = []
-    age = int(data.get("age", 0) or 0)
-    height = safe_float(data.get("height_cm"))
-    weight = safe_float(data.get("weight_kg"))
+SEX_OPTIONS = ["Female", "Male"]
+ACTIVITY_OPTIONS = ["Sedentary", "Lightly active", "Moderately active", "Very active", "Extra active"]
+HEALTH_OPTIONS = ["No", "Yes", "Not sure"]
+GOAL_OPTIONS = ["Weight loss", "Weight maintenance", "Weight gain", "General healthy eating"]
+DURATION_OPTIONS = [7, 14, 30, 60, 90]
 
-    if not 18 <= age <= 100:
-        errors.append("Age must be between 18 and 100 for this adult nutrition MVP.")
-    if not 120 <= height <= 230:
-        errors.append("Please enter a realistic height between 120 and 230 cm.")
-    if not 25 <= weight <= 300:
-        errors.append("Please enter a realistic weight between 25 and 300 kg.")
+
+def validate_user_data(data, step=None):
+    errors = []
+    if step in (None, 0):
+        age = safe_float(data.get("age"))
+        height = safe_float(data.get("height_cm"))
+        weight = safe_float(data.get("weight_kg"))
+        if not 18 <= age <= 100 or not age.is_integer():
+            errors.append("Enter your age as a whole number between 18 and 100.")
+        if not 120 <= height <= 230:
+            errors.append("Enter your height between 120 and 230 cm.")
+        if not 25 <= weight <= 300:
+            errors.append("Enter your weight between 25 and 300 kg.")
+        if data.get("sex") not in SEX_OPTIONS:
+            errors.append("Select your sex for the nutrition calculation.")
+        if data.get("activity_level") not in ACTIVITY_OPTIONS:
+            errors.append("Select your physical activity level.")
+
+    if step in (None, 1):
+        if data.get("has_medical_condition") not in HEALTH_OPTIONS:
+            errors.append("Answer the medical-condition question; choose Not sure if uncertain.")
+        if data.get("has_medical_condition") == "Yes":
+            conditions = data.get("medical_conditions") or []
+            if not conditions:
+                errors.append("Select at least one medical condition when answering Yes.")
+            if "Other" in conditions and not str(data.get("other_condition") or "").strip():
+                errors.append("Describe the other medical condition.")
+        if data.get("taking_medication") not in HEALTH_OPTIONS:
+            errors.append("Answer the medication question; choose Not sure if uncertain.")
+        if data.get("taking_medication") == "Yes":
+            names = data.get("medication_names") or ""
+            if isinstance(names, str):
+                names = names.replace("\n", ",").split(",")
+            if not any(str(name).strip() for name in names):
+                errors.append("Enter at least one medication name when answering Yes.")
+
+    if step in (None, 2):
+        if data.get("goal") not in GOAL_OPTIONS:
+            errors.append("Select your primary nutrition goal.")
+        if not str(data.get("food_allergies") or "").strip():
+            errors.append("List your food allergies, or enter None or Not sure.")
+
+    if step in (None, 3):
+        duration = safe_float(data.get("duration_days"))
+        if not 1 <= duration <= 365 or not duration.is_integer():
+            errors.append("Choose a plan duration or enter a whole number between 1 and 365 days.")
     return errors
 
 
@@ -944,6 +973,8 @@ def show_assessment():
     st.title("Tell us what works for you")
     st.markdown('<p class="lead">These inputs are used to personalize your plan and apply the safety layer.</p>', unsafe_allow_html=True)
 
+    st.caption("Fields marked * are required. Other fields are optional. For health questions, choose Not sure if uncertain.")
+
     current = st.session_state.wizard_step
     data = st.session_state.wizard_data
     show_wizard_progress(current)
@@ -952,17 +983,22 @@ def show_assessment():
         st.subheader("Your profile")
         c1, c2 = st.columns(2)
         with c1:
-            data["age"] = st.number_input("Age", min_value=18, max_value=100, value=int(data.get("age", 25)), step=1)
-            data["height_cm"] = st.number_input("Height (cm)", min_value=120.0, max_value=230.0, value=float(data.get("height_cm", 170.0)), step=0.5)
+            data["age"] = st.number_input("Age *", min_value=18, max_value=100, value=data.get("age"), step=1, placeholder="Enter your age")
+            data["height_cm"] = st.number_input("Height (cm) *", min_value=120.0, max_value=230.0, value=data.get("height_cm"), step=0.5, placeholder="Enter your height")
         with c2:
-            data["sex"] = st.selectbox("Sex", ["Female", "Male"], index=["Female", "Male"].index(data.get("sex", "Female")))
-            data["weight_kg"] = st.number_input("Weight (kg)", min_value=25.0, max_value=300.0, value=float(data.get("weight_kg", 70.0)), step=0.5)
-        activity_options = ["Sedentary", "Lightly active", "Moderately active", "Very active", "Extra active"]
-        data["activity_level"] = st.selectbox("Physical activity level", activity_options, index=activity_options.index(data.get("activity_level", "Moderately active")))
+            data["sex"] = st.selectbox("Sex *", SEX_OPTIONS, index=SEX_OPTIONS.index(data["sex"]) if data.get("sex") in SEX_OPTIONS else None, placeholder="Select an option")
+            data["weight_kg"] = st.number_input("Weight (kg) *", min_value=25.0, max_value=300.0, value=data.get("weight_kg"), step=0.5, placeholder="Enter your weight")
+        activity_options = ACTIVITY_OPTIONS
+        data["activity_level"] = st.selectbox("Physical activity level *", activity_options, index=activity_options.index(data["activity_level"]) if data.get("activity_level") in activity_options else None, placeholder="Select your activity level")
         st.caption("BMR/TDEE calculations use Mifflin–St Jeor and the selected activity factor.")
         _, nxt = st.columns([3,1])
         with nxt:
             if st.button("Continue", type="primary", use_container_width=True, key="wizard_next_0"):
+                errors = validate_user_data(data, step=0)
+                if errors:
+                    for error in errors:
+                        st.error(error)
+                    return
                 st.session_state.wizard_step = 1
                 st.rerun()
 
@@ -970,10 +1006,10 @@ def show_assessment():
         st.subheader("Health & medication information")
         st.caption("This information is used for dietary context and safety checks. It does not change your medical treatment.")
 
-        health_options = ["No", "Yes", "Not sure"]
+        health_options = HEALTH_OPTIONS
         data["has_medical_condition"] = st.radio(
-            "Do you have any medical condition that may affect your diet or nutritional needs?",
-            health_options, index=health_options.index(data.get("has_medical_condition", "No")),
+            "Do you have any medical condition that may affect your diet or nutritional needs? *",
+            health_options, index=health_options.index(data["has_medical_condition"]) if data.get("has_medical_condition") in health_options else None,
             horizontal=True
         )
         condition_options = [
@@ -982,26 +1018,29 @@ def show_assessment():
         ]
         if data["has_medical_condition"] == "Yes":
             data["medical_conditions"] = st.multiselect(
-                "What medical condition(s) do you have?",
+                "What medical condition(s) do you have? *",
                 condition_options,
                 default=data.get("medical_conditions", [])
             )
             if "Other" in data["medical_conditions"]:
-                data["other_condition"] = st.text_input("Specify other condition", value=data.get("other_condition", ""))
+                data["other_condition"] = st.text_input("Specify other condition *", value=data.get("other_condition", ""))
         else:
             data["medical_conditions"] = []
 
         st.divider()
         data["taking_medication"] = st.radio(
-            "Are you currently taking any medications that may be relevant to your diet or nutrition?",
-            health_options, index=health_options.index(data.get("taking_medication", "No")),
+            "Are you currently taking any medications that may be relevant to your diet or nutrition? *",
+            health_options, index=health_options.index(data["taking_medication"]) if data.get("taking_medication") in health_options else None,
             horizontal=True
         )
         if data["taking_medication"] == "Yes":
             st.caption("You may enter multiple medications. Strength and frequency are optional.")
-            data["medication_names"] = st.text_area("Medication name(s)", value=", ".join(data.get("medication_names", [])), placeholder="Example: metformin, losartan")
-            data["medication_strengths"] = st.text_area("Strength / dose, if known", value=data.get("medication_strengths", ""), placeholder="Example: 500 mg")
-            data["medication_frequency"] = st.text_area("Frequency, if known", value=data.get("medication_frequency", ""), placeholder="Example: twice daily")
+            medication_names = data.get("medication_names", "")
+            if isinstance(medication_names, list):
+                medication_names = ", ".join(medication_names)
+            data["medication_names"] = st.text_area("Medication name(s) *", value=medication_names, placeholder="Example: metformin, losartan")
+            data["medication_strengths"] = st.text_area("Strength / dose (optional)", value=data.get("medication_strengths", ""), placeholder="Example: 500 mg")
+            data["medication_frequency"] = st.text_area("Frequency (optional)", value=data.get("medication_frequency", ""), placeholder="Example: twice daily")
         else:
             data["medication_names"] = ""
             data["medication_strengths"] = ""
@@ -1014,25 +1053,30 @@ def show_assessment():
                 st.rerun()
         with nxt:
             if st.button("Continue", type="primary", use_container_width=True, key="wizard_next_1"):
+                errors = validate_user_data(data, step=1)
+                if errors:
+                    for error in errors:
+                        st.error(error)
+                    return
                 st.session_state.wizard_step = 2
                 st.rerun()
 
     elif current == 2:
         st.subheader("Goal & dietary preferences")
-        goal_options = ["Weight loss", "Weight maintenance", "Weight gain", "General healthy eating"]
-        data["goal"] = st.selectbox("Primary nutrition goal", goal_options, index=goal_options.index(data.get("goal", "General healthy eating")))
+        goal_options = GOAL_OPTIONS
+        data["goal"] = st.selectbox("Primary nutrition goal *", goal_options, index=goal_options.index(data["goal"]) if data.get("goal") in goal_options else None, placeholder="Select your goal")
         dietary_options = ["No specific preference", "Vegetarian", "Vegan", "Halal", "Other"]
-        data["dietary_preference"] = st.selectbox("Dietary preference", dietary_options, index=dietary_options.index(data.get("dietary_preference", "No specific preference")))
+        data["dietary_preference"] = st.selectbox("Dietary preference (optional)", dietary_options, index=dietary_options.index(data.get("dietary_preference", "No specific preference")))
         if data["dietary_preference"] == "Other":
-            data["dietary_other"] = st.text_input("Describe your dietary preference", value=data.get("dietary_other", ""))
+            data["dietary_other"] = st.text_input("Describe your dietary preference (optional)", value=data.get("dietary_other", ""))
 
         c1, c2 = st.columns(2)
         with c1:
-            data["food_allergies"] = st.text_area("Food allergies", value=data.get("food_allergies", ""), placeholder="Example: peanuts, shellfish, milk")
-            data["dietary_restrictions"] = st.text_area("Dietary restrictions", value=data.get("dietary_restrictions", ""), placeholder="Example: low sodium, gluten-free")
+            data["food_allergies"] = st.text_area("Food allergies *", value=data.get("food_allergies", ""), placeholder="List allergies, or enter None / Not sure", help="An explicit response is required so a blank field is not mistaken for no allergies.")
+            data["dietary_restrictions"] = st.text_area("Dietary restrictions (optional)", value=data.get("dietary_restrictions", ""), placeholder="Example: low sodium, gluten-free")
         with c2:
-            data["foods_to_avoid"] = st.text_area("Foods you dislike or want to avoid", value=data.get("foods_to_avoid", ""), placeholder="Example: fish, very spicy foods")
-            data["favourite_foods"] = st.text_area("Favourite or commonly available foods", value=data.get("favourite_foods", ""), placeholder="Example: roti, rice, chicken, lentils, vegetables")
+            data["foods_to_avoid"] = st.text_area("Foods you dislike or want to avoid (optional)", value=data.get("foods_to_avoid", ""), placeholder="Example: fish, very spicy foods")
+            data["favourite_foods"] = st.text_area("Favourite or commonly available foods (optional)", value=data.get("favourite_foods", ""), placeholder="Example: roti, rice, chicken, lentils, vegetables")
 
         back, nxt = st.columns(2)
         with back:
@@ -1041,29 +1085,36 @@ def show_assessment():
                 st.rerun()
         with nxt:
             if st.button("Continue", type="primary", use_container_width=True, key="wizard_next_2"):
+                errors = validate_user_data(data, step=2)
+                if errors:
+                    for error in errors:
+                        st.error(error)
+                    return
                 st.session_state.wizard_step = 3
                 st.rerun()
 
     else:
         st.subheader("Choose your plan duration")
-        duration_options = [7, 14, 30, 60, 90]
+        duration_options = DURATION_OPTIONS
+        preset_duration = data.get("preset_duration_days", data.get("duration_days"))
         selected = st.selectbox(
-            "Plan duration",
+            "Plan duration *",
             duration_options,
-            index=duration_options.index(int(data.get("duration_days", 30))),
+            index=duration_options.index(preset_duration) if preset_duration in duration_options else None,
             format_func=lambda x: f"{x} days"
         )
+        data["preset_duration_days"] = selected
         data["duration_days"] = selected
         custom = st.checkbox("Use a custom duration instead", value=data.get("use_custom_duration", False), key="use_custom_duration")
         data["use_custom_duration"] = custom
         if custom:
             data["duration_days"] = st.number_input(
-                "Custom duration (days)", min_value=1, max_value=365,
-                value=int(data.get("custom_duration_days", 30)), step=1
+                "Custom duration (days) *", min_value=1, max_value=365,
+                value=data.get("custom_duration_days"), step=1, placeholder="Enter number of days"
             )
             data["custom_duration_days"] = data["duration_days"]
 
-        st.info("30 days is the recommended default. You can choose another duration or enter your own.")
+        st.info("Choose a preset duration or enable custom duration and enter 1–365 days. Only one duration is required.")
         st.markdown('<div class="notice"><strong>Safety first.</strong> Medical and medication information is considered for context only. NutriGuide AI never recommends starting, stopping, or changing medication.</div>', unsafe_allow_html=True)
 
         back, submit = st.columns(2)
@@ -1073,6 +1124,12 @@ def show_assessment():
                 st.rerun()
         with submit:
             if st.button("Generate my personalized plan", type="primary", use_container_width=True, key="wizard_submit"):
+                errors = validate_user_data(data)
+                if errors:
+                    st.error("Complete the required fields before generating a plan. Use Back to review earlier steps if needed.")
+                    for error in errors:
+                        st.error(error)
+                    return
                 conditions = list(data.get("medical_conditions", []))
                 if "Other" in conditions and data.get("other_condition", "").strip():
                     conditions = [x for x in conditions if x != "Other"] + [data["other_condition"].strip()]
@@ -1104,13 +1161,8 @@ def show_assessment():
                     "favourite_foods": data.get("favourite_foods", "").strip(),
                     "duration_days": int(data["duration_days"]),
                 }
-                errors = validate_user_data(user_data)
-                if errors:
-                    for error in errors:
-                        st.error(error)
-                else:
-                    st.session_state.user_data = user_data
-                    run_ai_workflow(user_data)
+                st.session_state.user_data = user_data
+                run_ai_workflow(user_data)
 
 
 # ============================================================
