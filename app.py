@@ -209,8 +209,6 @@ st.markdown(
         [data-testid="stSidebar"], [role="dialog"] { background:var(--surface); color:var(--ink); }
         [data-testid="stAlertContainer"] { background:var(--surface-raised); color:var(--ink); }
         [data-testid="stAlert"] p { color:var(--ink); }
-        [data-testid="stJson"], [data-testid="stJson"] .react-json-view { background:var(--surface-raised) !important; color:var(--ink) !important; }
-        [data-testid="stJson"] .react-json-view span { color:var(--ink) !important; }
         [data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] { color:var(--ink); }
         .stApp input:focus-visible, .stApp textarea:focus-visible { outline:2px solid var(--leaf); outline-offset:2px; }
         .stApp a { color:var(--teal); }
@@ -1477,22 +1475,6 @@ def show_results():
         st.metric("Carbohydrate target", f"{nutrition.get('carbohydrate_g') or '—'} g/day")
     with m3:
         st.metric("Fat target", f"{nutrition.get('fat_g') or '—'} g/day")
-
-    with st.expander("View your profile & health context"):
-        st.json({
-            "Age": user_data.get("age"),
-            "Sex": user_data.get("sex"),
-            "Height": f"{user_data.get('height_cm')} cm",
-            "Weight": f"{user_data.get('weight_kg')} kg",
-            "Activity": user_data.get("activity_level"),
-            "Goal": user_data.get("goal"),
-            "Dietary preference": user_data.get("dietary_preference"),
-            "Allergies": user_data.get("food_allergies") or "None reported",
-            "Restrictions": user_data.get("dietary_restrictions") or "None reported",
-            "Foods to avoid": user_data.get("foods_to_avoid") or "None reported",
-            "Medical conditions": user_data.get("medical_conditions") or "None reported",
-            "Medications": user_data.get("medication_names") or "None reported",
-        })
 
     with st.expander("Personalized assessment", expanded=True):
         st.write(assessment.get("profile_summary", ""))
