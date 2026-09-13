@@ -94,105 +94,105 @@ for key, value in DEFAULT_STATE.items():
 st.markdown(
     """
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
 
-        .block-container {
-            max-width: 1150px;
-            padding-top: 2rem;
-            padding-bottom: 3rem;
+        :root {
+            --leaf: #2f9e6f;
+            --leaf-soft: #78c39f;
+            --mint: #eaf5ee;
+            --paper: #f4f8f5;
+            --ink: #17241d;
+            --citrus: #f0a92b;
+            --teal: #1c857f;
+            --alert: #d8574b;
+            --line: rgba(23, 36, 29, 0.10);
+            --glass: rgba(255, 255, 255, 0.72);
         }
 
-        h1 {
-            font-weight: 700;
-            letter-spacing: -0.5px;
+        html, body, [class*="css"] { font-family: "Inter", sans-serif; }
+        .stApp { background: var(--paper); color: var(--ink); }
+        .stApp::before {
+            content: ""; position: fixed; inset: 0; pointer-events: none;
+            background-color: var(--paper);
+            background-image: linear-gradient(rgba(47,158,111,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(47,158,111,.025) 1px, transparent 1px);
+            background-size: 32px 32px;
         }
+        header[data-testid="stHeader"] { background: rgba(244,248,245,.80); backdrop-filter: blur(20px); }
+        #MainMenu, footer { visibility: hidden; }
+        .block-container { max-width: 1180px; padding: 2.25rem 2rem 4rem; position: relative; }
+        h1, h2, h3 { font-family: "Space Grotesk", sans-serif; color: var(--ink); letter-spacing: 0; }
+        h1 { font-size: clamp(2rem, 4vw, 3.25rem); line-height: 1.08; font-weight: 700; }
+        h2, h3 { font-weight: 600; }
+        p, label, .stMarkdown { color: var(--ink); }
+        hr { border-color: var(--line); margin: 1.6rem 0; }
 
-        h2,
-        h3 {
-            font-weight: 650;
+        .brandbar { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:2rem; }
+        .brand { display:flex; align-items:center; gap:.75rem; font:700 1.12rem "Space Grotesk",sans-serif; }
+        .brand-mark { width:2.25rem; height:2.25rem; display:grid; place-items:center; border-radius:.75rem; background:var(--leaf); color:white; }
+        .status-chip { display:inline-flex; align-items:center; gap:.5rem; padding:.45rem .75rem; border-radius:999px; background:var(--mint); color:var(--leaf); font-size:.78rem; font-weight:700; border:1px solid rgba(47,158,111,.16); }
+        .status-chip::before { content:""; width:.42rem; height:.42rem; border-radius:50%; background:var(--leaf); }
+        .eyebrow { color:var(--leaf); font-size:.76rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; margin-bottom:.7rem; }
+        .lead { color:rgba(23,36,29,.66); font-size:1.03rem; line-height:1.7; max-width:680px; }
+        .glass, .feature-card, .step-card, .summary-card, .meal-card {
+            background:var(--glass); border:1px solid rgba(255,255,255,.9); box-shadow:0 12px 40px rgba(23,36,29,.06); backdrop-filter:blur(18px); border-radius:16px;
         }
+        .hero-panel { padding:clamp(1.5rem,4vw,3rem); margin-bottom:1rem; overflow:hidden; position:relative; }
+        .hero-panel::after { content:""; position:absolute; width:8px; top:0; bottom:0; left:0; background:var(--leaf); }
+        .hero-grid { display:grid; grid-template-columns:1.45fr .75fr; gap:2rem; align-items:center; }
+        .hero-score { background:var(--ink); color:white; border-radius:14px; padding:1.3rem; }
+        .hero-score strong { display:block; font:600 2.1rem "Space Grotesk",sans-serif; color:white; }
+        .hero-score span { color:rgba(255,255,255,.68); font-size:.84rem; }
+        .trust-row { display:flex; flex-wrap:wrap; gap:.65rem; margin-top:1.4rem; }
+        .trust-item { padding:.5rem .7rem; border-radius:8px; background:var(--mint); color:var(--leaf); font-size:.78rem; font-weight:700; }
+        .section-heading { display:flex; align-items:end; justify-content:space-between; gap:1rem; margin:2rem 0 1rem; }
+        .section-heading h2 { margin:0; font-size:1.5rem; }
+        .section-heading p { margin:0; color:rgba(23,36,29,.55); font-size:.85rem; }
+        .feature-card, .step-card { min-height:190px; padding:1.35rem; }
+        .feature-number { display:grid; place-items:center; width:2.25rem; height:2.25rem; border-radius:.7rem; margin-bottom:1.1rem; background:var(--mint); color:var(--leaf); font-weight:800; }
+        .feature-card h3, .step-card h3 { font-size:1rem; margin:.2rem 0 .55rem; }
+        .feature-card p, .step-card p { color:rgba(23,36,29,.62); font-size:.88rem; line-height:1.6; }
+        .notice { border-left:3px solid var(--citrus); background:rgba(240,169,43,.10); padding:1rem 1.1rem; border-radius:0 12px 12px 0; color:rgba(23,36,29,.72); font-size:.86rem; }
 
-        div[data-testid="stMetric"] {
-            border: 1px solid rgba(128, 128, 128, 0.22);
-            padding: 18px;
-            border-radius: 16px;
-            background: rgba(128, 128, 128, 0.04);
+        div[data-testid="stMetric"] { background:var(--glass); border:1px solid rgba(255,255,255,.9); padding:1rem; border-radius:14px; box-shadow:0 8px 28px rgba(23,36,29,.05); min-height:126px; }
+        div[data-testid="stMetricLabel"] { font-weight:600; color:rgba(23,36,29,.55); }
+        div[data-testid="stMetricValue"] { font-family:"Space Grotesk",sans-serif; color:var(--ink); }
+        div[data-testid="stAlert"] { border-radius:12px; border-width:1px; }
+        div[data-testid="stExpander"] { background:rgba(255,255,255,.65); border:1px solid rgba(255,255,255,.9); border-radius:14px; overflow:hidden; }
+        div[data-baseweb="select"] > div, textarea, input { border-radius:10px !important; border-color:var(--line) !important; background:rgba(255,255,255,.76) !important; }
+        textarea:focus, input:focus { border-color:var(--leaf) !important; box-shadow:0 0 0 2px rgba(47,158,111,.12) !important; }
+        .stButton > button, .stDownloadButton > button { border-radius:10px; min-height:44px; font-weight:700; border-color:var(--line); transition:transform .16s ease, box-shadow .16s ease; }
+        .stButton > button:hover, .stDownloadButton > button:hover { transform:translateY(-1px); box-shadow:0 8px 18px rgba(23,36,29,.10); border-color:var(--leaf); }
+        .stButton > button[kind="primary"], .stDownloadButton > button[kind="primary"] { background:var(--ink); color:white; border-color:var(--ink); }
+        .stButton > button[kind="primary"] p, .stDownloadButton > button[kind="primary"] p { color:white; }
+        .stProgress > div > div > div > div { background:var(--leaf); }
+        .stTabs [data-baseweb="tab-list"] { gap:.3rem; background:rgba(23,36,29,.04); border-radius:12px; padding:.3rem; }
+        .stTabs [data-baseweb="tab"] { border-radius:9px; padding:.55rem 1rem; }
+        .stTabs [aria-selected="true"] { background:white; color:var(--leaf); }
+        .stTabs [data-baseweb="tab-highlight"] { display:none; }
+        .summary-card { padding:1.35rem; margin-bottom:1rem; }
+        .summary-card h2 { margin:0 0 .35rem; font-size:1.35rem; }
+        .summary-card p { margin:.2rem 0; color:rgba(23,36,29,.62); }
+        .meal-card { padding:1rem; margin:.65rem 0; border-left:3px solid var(--leaf); font-size:.9rem; }
+        .wizard-shell { background:var(--glass); border:1px solid rgba(255,255,255,.9); border-radius:16px; padding:1.3rem; margin:1rem 0 1.5rem; box-shadow:0 12px 40px rgba(23,36,29,.05); }
+        .wizard-labels { display:grid; grid-template-columns:repeat(3,1fr); gap:.75rem; margin-top:.75rem; }
+        .wizard-step { color:rgba(23,36,29,.42); font-size:.78rem; font-weight:600; }
+        .wizard-step.active { color:var(--leaf); }
+        .wizard-step.done { color:var(--teal); }
+        .app-footer { text-align:center; padding:2rem 0 .5rem; color:rgba(23,36,29,.48); font-size:.78rem; }
+        .small-note { font-size:.84rem; color:rgba(23,36,29,.55); }
+
+        @keyframes ng-fade { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+        .hero-panel, div[data-testid="stMetric"] { animation:ng-fade .5s ease both; }
+        @media (prefers-reduced-motion:reduce) { *, *::before, *::after { animation:none !important; transition:none !important; } }
+        @media (max-width:760px) {
+            .block-container { padding:1.2rem 1rem 3rem; }
+            .hero-grid { grid-template-columns:1fr; }
+            .brandbar { align-items:flex-start; }
+            .status-chip { display:none; }
+            .feature-card, .step-card { min-height:auto; }
+            .wizard-labels { gap:.3rem; }
+            .wizard-step { font-size:.68rem; }
         }
-
-        div[data-testid="stMetricLabel"] {
-            font-weight: 600;
-        }
-
-        .stButton > button {
-            border-radius: 10px;
-            min-height: 45px;
-            font-weight: 600;
-        }
-
-        div[data-baseweb="select"] > div {
-            border-radius: 10px;
-        }
-
-        textarea,
-        input {
-            border-radius: 10px !important;
-        }
-
-        div[data-testid="stAlert"] {
-            border-radius: 12px;
-        }
-
-        .feature-card {
-            padding: 1.25rem;
-            border: 1px solid rgba(128, 128, 128, 0.20);
-            border-radius: 16px;
-            min-height: 180px;
-            background: rgba(128, 128, 128, 0.035);
-        }
-
-        .feature-card h3 {
-            margin-bottom: 0.6rem;
-        }
-
-        .step-card {
-            padding: 1.2rem;
-            border: 1px solid rgba(128, 128, 128, 0.18);
-            border-radius: 14px;
-            min-height: 165px;
-            background: rgba(128, 128, 128, 0.025);
-        }
-
-        .step-card h3 {
-            margin-bottom: 0.6rem;
-        }
-
-        .meal-card {
-            padding: 1rem 1.1rem;
-            margin-bottom: 0.7rem;
-            border: 1px solid rgba(128, 128, 128, 0.18);
-            border-radius: 12px;
-            background: rgba(128, 128, 128, 0.035);
-        }
-
-        .summary-card {
-            padding: 1.25rem;
-            border: 1px solid rgba(128, 128, 128, 0.20);
-            border-radius: 16px;
-            background: rgba(128, 128, 128, 0.035);
-            margin-bottom: 1rem;
-        }
-
-        .small-note {
-            font-size: 0.9rem;
-            opacity: 0.78;
-        }
-
-        .app-footer {
-            text-align: center;
-            padding: 1.5rem 0 0.5rem 0;
-            opacity: 0.7;
-            font-size: 0.85rem;
-        }
-
     </style>
     """,
     unsafe_allow_html=True,
@@ -1100,156 +1100,64 @@ def create_pdf_report(
 # ============================================================
 
 def show_home():
-
-    st.title("🥗 NutriGuide AI")
-
-    st.subheader(
-        "Your AI-Powered Nutrition Assistant"
-    )
-
-    st.write(
-        "Get personalised general nutrition guidance based on "
-        "your preferences, goals and dietary needs."
-    )
-
-    st.divider()
-
-    st.info(
-        "💡 This app provides general nutrition guidance. "
-        "For medical or condition-specific dietary advice, "
-        "please consult a qualified healthcare professional."
-    )
-
-    # --------------------------------------------------------
-    # FEATURES
-    # --------------------------------------------------------
-
-    st.subheader("✨ What you can get")
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-
-        st.markdown(
-            """
-            <div class="feature-card">
-                <h3>🧠 Personalised Guidance</h3>
-                <p>
-                    Guidance based on your food preferences,
-                    activity level, goals and dietary needs.
-                </p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    with col2:
-
-        st.markdown(
-            """
-            <div class="feature-card">
-                <h3>🍽️ Meal Ideas</h3>
-                <p>
-                    Practical breakfast, lunch, snack and dinner
-                    ideas for everyday nutrition.
-                </p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    with col3:
-
-        st.markdown(
-            """
-            <div class="feature-card">
-                <h3>🛡️ Safety-Aware</h3>
-                <p>
-                    Allergies, dietary restrictions and health
-                    concerns are considered before guidance is generated.
-                </p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    st.divider()
-
-    # --------------------------------------------------------
-    # HOW IT WORKS
-    # --------------------------------------------------------
-
-    st.subheader("🚀 How it works")
-
-    step1, step2, step3 = st.columns(3)
-
-    with step1:
-
-        st.markdown(
-            """
-            <div class="step-card">
-                <h3>1️⃣ Tell us about yourself</h3>
-                <p>
-                    Share your basic dietary preferences,
-                    activity level, goals and food information.
-                </p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    with step2:
-
-        st.markdown(
-            """
-            <div class="step-card">
-                <h3>2️⃣ AI reviews your information</h3>
-                <p>
-                    NutriGuide AI analyses your information
-                    and checks important dietary considerations.
-                </p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    with step3:
-
-        st.markdown(
-            """
-            <div class="step-card">
-                <h3>3️⃣ Get your guidance</h3>
-                <p>
-                    Receive personalised meal ideas and
-                    practical general nutrition guidance.
-                </p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    st.divider()
-
-    if st.button(
-        "🥗 Start Nutrition Assessment",
-        type="primary",
-        use_container_width=True,
-        key="start_assessment_home",
-    ):
-
-        st.session_state.page = "assessment"
-
-        st.rerun()
-
     st.markdown(
         """
-        <div class="app-footer">
-            NutriGuide AI is for general educational nutrition
-            guidance and is not a substitute for professional medical advice.
+        <div class="brandbar">
+            <div class="brand"><span class="brand-mark">n</span>NutriGuide <span style="color:var(--leaf)">AI</span></div>
+            <span class="status-chip">Nutrition intelligence ready</span>
         </div>
+        <section class="glass hero-panel">
+            <div class="hero-grid">
+                <div>
+                    <div class="eyebrow">Personal nutrition, clearly guided</div>
+                    <h1>Build healthier habits around food that fits your life.</h1>
+                    <p class="lead">Share your preferences, routine and goals. NutriGuide AI turns them into practical meal ideas and safety-aware, everyday nutrition guidance.</p>
+                    <div class="trust-row">
+                        <span class="trust-item">Preference aware</span>
+                        <span class="trust-item">Allergy checked</span>
+                        <span class="trust-item">Flexible meal ideas</span>
+                    </div>
+                </div>
+                <div class="hero-score">
+                    <span>Your guided path</span>
+                    <strong>3 simple steps</strong>
+                    <span>Profile · Safety review · Personal guidance</span>
+                </div>
+            </div>
+        </section>
+        <div class="notice"><strong>General wellness guidance.</strong> For medical or condition-specific dietary advice, consult a qualified healthcare professional.</div>
         """,
         unsafe_allow_html=True,
     )
+
+    st.markdown('<div class="section-heading"><h2>Designed around your needs</h2><p>Clear guidance, no rigid diet plans</p></div>', unsafe_allow_html=True)
+    cols = st.columns(3)
+    cards = [
+        ("01", "Personalised guidance", "Recommendations reflect your food preferences, activity level, goals and dietary needs."),
+        ("02", "Practical meal ideas", "Flexible breakfast, lunch, snack and dinner ideas built for everyday routines."),
+        ("03", "Safety-aware review", "Allergies, foods to avoid and health concerns are reviewed before guidance is prepared."),
+    ]
+    for col, (number, title, body) in zip(cols, cards):
+        with col:
+            st.markdown(f'<div class="feature-card"><span class="feature-number">{number}</span><h3>{title}</h3><p>{body}</p></div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="section-heading"><h2>How your plan comes together</h2><p>About two minutes to complete</p></div>', unsafe_allow_html=True)
+    steps = st.columns(3)
+    step_content = [
+        ("1", "Tell us about yourself", "Add your age group, activity level and the foods that work for you."),
+        ("2", "Complete a safety check", "The AI reviews dietary restrictions and important health considerations."),
+        ("3", "Explore your guidance", "Review personalised meal ideas, nutrition tips and a downloadable report."),
+    ]
+    for col, (number, title, body) in zip(steps, step_content):
+        with col:
+            st.markdown(f'<div class="step-card"><span class="feature-number">{number}</span><h3>{title}</h3><p>{body}</p></div>', unsafe_allow_html=True)
+
+    st.write("")
+    if st.button("Start nutrition assessment", type="primary", use_container_width=True, key="start_assessment_home"):
+        st.session_state.page = "assessment"
+        st.rerun()
+
+    st.markdown('<div class="app-footer">NutriGuide AI · General educational nutrition guidance</div>', unsafe_allow_html=True)
 
 
 # ============================================================
@@ -1520,287 +1428,106 @@ WIZARD_STEPS = ["Basic Info", "Preferences", "Goals & Health"]
 
 
 def show_wizard_progress(current):
-    """Render a progress bar + step labels for the assessment wizard."""
-
+    """Render clear progress and labels for the assessment wizard."""
+    st.markdown('<div class="wizard-shell"><div class="eyebrow">Assessment progress</div>', unsafe_allow_html=True)
     st.progress((current + 1) / len(WIZARD_STEPS))
-
-    cols = st.columns(len(WIZARD_STEPS))
-
-    for i, col in enumerate(cols):
-
-        with col:
-
-            if i < current:
-                st.markdown(f"✅ **{WIZARD_STEPS[i]}**")
-            elif i == current:
-                st.markdown(f"🔵 **{WIZARD_STEPS[i]}**")
-            else:
-                st.markdown(f"⚪ {WIZARD_STEPS[i]}")
+    labels = []
+    for i, label in enumerate(WIZARD_STEPS):
+        state = "done" if i < current else "active" if i == current else ""
+        prefix = "Complete" if i < current else f"Step {i + 1}"
+        labels.append(f'<div class="wizard-step {state}">{prefix}<br><strong>{label}</strong></div>')
+    st.markdown('<div class="wizard-labels">' + ''.join(labels) + '</div></div>', unsafe_allow_html=True)
 
 
 def show_assessment():
-
-    st.title("📝 Nutrition Assessment")
-
-    st.write(
-        "Tell us a little about your nutrition preferences and "
-        "goals. This information will be used to prepare general "
-        "personalised guidance."
+    st.markdown(
+        '<div class="brandbar"><div class="brand"><span class="brand-mark">n</span>NutriGuide <span style="color:var(--leaf)">AI</span></div><span class="status-chip">Private assessment</span></div>',
+        unsafe_allow_html=True,
     )
-
-    st.divider()
+    st.markdown('<div class="eyebrow">Personal nutrition profile</div>', unsafe_allow_html=True)
+    st.title("Tell us what works for you")
+    st.markdown('<p class="lead">Your answers help create practical, safety-aware guidance. You can move back at any time without losing your progress.</p>', unsafe_allow_html=True)
 
     current = st.session_state.wizard_step
     data = st.session_state.wizard_data
-
     show_wizard_progress(current)
 
-    st.divider()
-
-    # ==========================================================
-    # STEP 0 - BASIC INFO
-    # ==========================================================
-
     if current == 0:
-
-        st.subheader("👤 Basic Information")
-
+        st.subheader("Your everyday profile")
+        st.caption("Start with two simple details so the guidance fits your stage of life and routine.")
         col1, col2 = st.columns(2)
-
-        age_options = [
-            "Under 18",
-            "18–30",
-            "31–45",
-            "46–60",
-            "60+",
-        ]
-
+        age_options = ["Under 18", "18–30", "31–45", "46–60", "60+"]
         activity_options = ["Low", "Moderate", "High"]
-
         with col1:
-
-            data["age_group"] = st.selectbox(
-                "Age Group",
-                age_options,
-                index=age_options.index(
-                    data.get("age_group", age_options[1])
-                ),
-            )
-
+            data["age_group"] = st.selectbox("Age group", age_options, index=age_options.index(data.get("age_group", age_options[1])))
         with col2:
-
-            data["activity_level"] = st.selectbox(
-                "Activity Level",
-                activity_options,
-                index=activity_options.index(
-                    data.get("activity_level", "Moderate")
-                ),
-            )
-
-        st.divider()
-
+            data["activity_level"] = st.selectbox("Activity level", activity_options, index=activity_options.index(data.get("activity_level", "Moderate")))
+        st.write("")
         _, next_col = st.columns([3, 1])
-
         with next_col:
-
-            if st.button(
-                "Next ➡️",
-                type="primary",
-                use_container_width=True,
-                key="wizard_next_0",
-            ):
-
+            if st.button("Continue", type="primary", use_container_width=True, key="wizard_next_0"):
                 st.session_state.wizard_step = 1
                 st.rerun()
 
-    # ==========================================================
-    # STEP 1 - DIETARY PREFERENCES
-    # ==========================================================
-
     elif current == 1:
-
-        st.subheader("🥗 Dietary Preferences")
-
-        dietary_options = [
-            "No specific preference",
-            "Vegetarian",
-            "Vegan",
-            "Other",
-        ]
-
-        data["dietary_preference"] = st.selectbox(
-            "Dietary Preference",
-            dietary_options,
-            index=dietary_options.index(
-                data.get("dietary_preference", dietary_options[0])
-            ),
-        )
-
+        st.subheader("Food preferences and needs")
+        st.caption("Include anything the guidance should always respect or avoid.")
+        dietary_options = ["No specific preference", "Vegetarian", "Vegan", "Other"]
+        data["dietary_preference"] = st.selectbox("Dietary preference", dietary_options, index=dietary_options.index(data.get("dietary_preference", dietary_options[0])))
         if data["dietary_preference"] == "Other":
-
-            data["dietary_other"] = st.text_input(
-                "Please describe your dietary preference",
-                value=data.get("dietary_other", ""),
-            )
-
-        data["food_allergies"] = st.text_area(
-            "Food Allergies",
-            value=data.get("food_allergies", ""),
-            placeholder="Example: peanuts, eggs, milk",
-        )
-
-        data["foods_to_avoid"] = st.text_area(
-            "Foods You Avoid",
-            value=data.get("foods_to_avoid", ""),
-            placeholder=(
-                "Example: very spicy food, certain vegetables"
-            ),
-        )
-
-        data["favourite_foods"] = st.text_area(
-            "Favourite / Available Foods",
-            value=data.get("favourite_foods", ""),
-            placeholder=(
-                "Example: rice, roti, chicken, vegetables, "
-                "fruit, yoghurt"
-            ),
-        )
-
-        st.divider()
-
+            data["dietary_other"] = st.text_input("Describe your dietary preference", value=data.get("dietary_other", ""))
+        left, right = st.columns(2)
+        with left:
+            data["food_allergies"] = st.text_area("Food allergies", value=data.get("food_allergies", ""), placeholder="For example: peanuts, eggs, milk")
+            data["foods_to_avoid"] = st.text_area("Foods you avoid", value=data.get("foods_to_avoid", ""), placeholder="For example: very spicy food")
+        with right:
+            data["favourite_foods"] = st.text_area("Favourite or available foods", value=data.get("favourite_foods", ""), placeholder="For example: rice, roti, chicken, vegetables, fruit, yoghurt", height=178)
+        st.write("")
         back_col, next_col = st.columns(2)
-
         with back_col:
-
-            if st.button(
-                "⬅️ Back",
-                use_container_width=True,
-                key="wizard_back_1",
-            ):
-
+            if st.button("Back", use_container_width=True, key="wizard_back_1"):
                 st.session_state.wizard_step = 0
                 st.rerun()
-
         with next_col:
-
-            if st.button(
-                "Next ➡️",
-                type="primary",
-                use_container_width=True,
-                key="wizard_next_1",
-            ):
-
+            if st.button("Continue", type="primary", use_container_width=True, key="wizard_next_1"):
                 st.session_state.wizard_step = 2
                 st.rerun()
 
-    # ==========================================================
-    # STEP 2 - GOALS & HEALTH + SUBMIT
-    # ==========================================================
-
     elif current == 2:
-
-        st.subheader("🎯 Your Goal")
-
-        goal_options = [
-            "Healthy eating",
-            "Fitness / active lifestyle",
-            "Better meal variety",
-            "Healthy lifestyle",
-            "General health concern",
-            "Other",
-        ]
-
-        data["goal"] = st.selectbox(
-            "What would you like help with?",
-            goal_options,
-            index=goal_options.index(
-                data.get("goal", goal_options[0])
-            ),
-        )
-
+        st.subheader("Goals and health context")
+        st.caption("This final step helps balance your goal with appropriate safety guidance.")
+        goal_options = ["Healthy eating", "Fitness / active lifestyle", "Better meal variety", "Healthy lifestyle", "General health concern", "Other"]
+        data["goal"] = st.selectbox("What would you like help with?", goal_options, index=goal_options.index(data.get("goal", goal_options[0])))
         if data["goal"] == "Other":
-
-            data["other_goal"] = st.text_input(
-                "Please describe your goal",
-                value=data.get("other_goal", ""),
-            )
-
-        data["health_information"] = st.text_area(
-            "Health Information / Concerns",
-            value=data.get("health_information", ""),
-            placeholder=(
-                "Optional. Mention any health concern you want "
-                "the AI to consider."
-            ),
-        )
-
-        st.divider()
-
+            data["other_goal"] = st.text_input("Describe your goal", value=data.get("other_goal", ""))
+        data["health_information"] = st.text_area("Health information or concerns", value=data.get("health_information", ""), placeholder="Optional. Add any concern the AI should consider.")
+        st.markdown('<div class="notice"><strong>Safety first.</strong> NutriGuide AI provides general education and does not diagnose conditions or prescribe treatment diets.</div>', unsafe_allow_html=True)
+        st.write("")
         back_col, submit_col = st.columns(2)
-
         with back_col:
-
-            if st.button(
-                "⬅️ Back",
-                use_container_width=True,
-                key="wizard_back_2",
-            ):
-
+            if st.button("Back", use_container_width=True, key="wizard_back_2"):
                 st.session_state.wizard_step = 1
                 st.rerun()
-
         with submit_col:
-
-            submitted = st.button(
-                "🧠 Generate Nutrition Guidance",
-                type="primary",
-                use_container_width=True,
-                key="wizard_submit",
-            )
-
+            submitted = st.button("Generate my guidance", type="primary", use_container_width=True, key="wizard_submit")
         if submitted:
-
-            actual_preference = data.get(
-                "dietary_preference", "No specific preference"
-            )
-
-            if (
-                actual_preference == "Other"
-                and data.get("dietary_other", "").strip()
-            ):
-
+            actual_preference = data.get("dietary_preference", "No specific preference")
+            if actual_preference == "Other" and data.get("dietary_other", "").strip():
                 actual_preference = data["dietary_other"].strip()
-
             actual_goal = data.get("goal", "Healthy eating")
-
-            if (
-                actual_goal == "Other"
-                and data.get("other_goal", "").strip()
-            ):
-
+            if actual_goal == "Other" and data.get("other_goal", "").strip():
                 actual_goal = data["other_goal"].strip()
-
             user_data = {
                 "age_group": data.get("age_group", ""),
                 "activity_level": data.get("activity_level", ""),
                 "dietary_preference": actual_preference,
-                "food_allergies": data.get(
-                    "food_allergies", ""
-                ).strip(),
-                "foods_to_avoid": data.get(
-                    "foods_to_avoid", ""
-                ).strip(),
-                "favourite_foods": data.get(
-                    "favourite_foods", ""
-                ).strip(),
+                "food_allergies": data.get("food_allergies", "").strip(),
+                "foods_to_avoid": data.get("foods_to_avoid", "").strip(),
+                "favourite_foods": data.get("favourite_foods", "").strip(),
                 "goal": actual_goal,
-                "health_information": data.get(
-                    "health_information", ""
-                ).strip(),
+                "health_information": data.get("health_information", "").strip(),
             }
-
             st.session_state.user_data = user_data
-
             run_ai_workflow(user_data)
 
 
@@ -1809,485 +1536,129 @@ def show_assessment():
 # ============================================================
 
 def show_results():
+    assessment = st.session_state.get("assessment", {})
+    safety_result = st.session_state.get("safety_result", {})
+    guidance = st.session_state.get("guidance", {})
+    user_data = st.session_state.get("user_data", {})
 
-    assessment = st.session_state.get(
-        "assessment",
-        {},
-    )
-
-    safety_result = st.session_state.get(
-        "safety_result",
-        {},
-    )
-
-    guidance = st.session_state.get(
-        "guidance",
-        {},
-    )
-
-    user_data = st.session_state.get(
-        "user_data",
-        {},
-    )
-
-    # --------------------------------------------------------
-    # DASHBOARD HEADER
-    # --------------------------------------------------------
-
-    st.title("📊 Nutrition Dashboard")
-
-    st.write(
-        "Your personalised general nutrition guidance is "
-        "ready to review."
-    )
-
-    st.divider()
-
-    # --------------------------------------------------------
-    # DASHBOARD SUMMARY
-    # --------------------------------------------------------
-
-    plan_title = guidance.get(
-        "plan_title",
-        "Personalised Nutrition Guidance",
-    )
-
-    guidance_type = guidance.get(
-        "guidance_type",
-        "General nutrition guidance",
-    )
-
-    duration = guidance.get(
-        "duration",
-        "Ongoing guidance",
-    )
+    plan_title = escape(str(guidance.get("plan_title", "Personalised Nutrition Guidance")))
+    guidance_type = escape(str(guidance.get("guidance_type", "General nutrition guidance")))
+    duration = escape(str(guidance.get("duration", "Ongoing guidance")))
+    safety_status = safety_result.get("status", "safe_to_continue")
+    safety_label = "Safety clear" if safety_status == "safe_to_continue" else "Review advised"
 
     st.markdown(
-        f"""
-        <div class="summary-card">
-            <h2>🌱 {plan_title}</h2>
-            <p>{guidance_type}</p>
-            <p><strong>Approach:</strong> {duration}</p>
-        </div>
-        """,
+        f'<div class="brandbar"><div class="brand"><span class="brand-mark">n</span>NutriGuide <span style="color:var(--leaf)">AI</span></div><span class="status-chip">{safety_label}</span></div>',
         unsafe_allow_html=True,
     )
+    st.markdown('<div class="eyebrow">Your nutrition dashboard</div>', unsafe_allow_html=True)
+    st.title("Your personalised guidance is ready")
+    st.markdown('<p class="lead">Review the key details first, then explore meal ideas, nutrition tips and your downloadable report.</p>', unsafe_allow_html=True)
 
-    # --------------------------------------------------------
-    # QUICK OVERVIEW
-    # --------------------------------------------------------
+    st.markdown(f'<div class="summary-card"><h2>{plan_title}</h2><p>{guidance_type}</p><p><strong>Approach:</strong> {duration}</p></div>', unsafe_allow_html=True)
 
-    st.subheader("👤 Quick Overview")
-
-    col1, col2, col3, col4 = st.columns(4)
-
-    with col1:
-
-        st.metric(
-            "Age Group",
-            user_data.get(
-                "age_group",
-                "Not provided",
-            ),
-        )
-
-    with col2:
-
-        st.metric(
-            "Activity",
-            user_data.get(
-                "activity_level",
-                "Not provided",
-            ),
-        )
-
-    with col3:
-
-        st.metric(
-            "Diet",
-            user_data.get(
-                "dietary_preference",
-                "Not provided",
-            ),
-        )
-
-    with col4:
-
-        st.metric(
-            "Goal",
-            user_data.get(
-                "goal",
-                "Not provided",
-            ),
-        )
-
-    # --------------------------------------------------------
-    # SAFETY STATUS
-    # --------------------------------------------------------
-
-    st.divider()
-
-    st.subheader("🛡️ Safety Status")
-
-    safety_status = safety_result.get(
-        "status",
-        "safe_to_continue",
-    )
-
-    if safety_status == "professional_review_recommended":
-
-        st.warning(
-            "👩‍⚕️ Professional review is recommended for "
-            "condition-specific dietary advice."
-        )
-
-    elif safety_status == "continue_with_caution":
-
-        st.warning(
-            "⚠️ Continue with caution and seek professional "
-            "advice where appropriate."
-        )
-
-    else:
-
-        st.success(
-            "✅ Dietary preferences and safety information "
-            "have been considered."
-        )
-
-    # --------------------------------------------------------
-    # AI ASSESSMENT
-    # --------------------------------------------------------
-
-    with st.expander(
-        "🧠 View AI Assessment",
-        expanded=True,
-    ):
-
-        st.write(
-            assessment.get(
-                "profile_summary",
-                "No assessment summary available.",
-            )
-        )
-
-        planning_considerations = assessment.get(
-            "planning_considerations",
-            [],
-        )
-
-        if planning_considerations:
-
-            st.markdown(
-                "**Planning Considerations**"
-            )
-
-            display_list_items(
-                planning_considerations
-            )
-
-    # --------------------------------------------------------
-    # DIETARY RESTRICTIONS
-    # --------------------------------------------------------
-
-    allergy_restrictions = safety_result.get(
-        "allergy_restrictions",
-        [],
-    )
-
-    dietary_restrictions = safety_result.get(
-        "dietary_restrictions",
-        [],
-    )
-
-    foods_to_avoid = safety_result.get(
-        "foods_to_avoid",
-        [],
-    )
-
-    safety_flags = safety_result.get(
-        "safety_flags",
-        [],
-    )
-
-    if (
-        allergy_restrictions
-        or dietary_restrictions
-        or foods_to_avoid
-        or safety_flags
-    ):
-
-        st.subheader("🚫 Dietary Restrictions")
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-
-            with st.expander(
-                "🚫 Allergies",
-                expanded=True,
-            ):
-
-                display_list_items(
-                    allergy_restrictions,
-                    empty_message="No allergies reported.",
-                )
-
-            with st.expander(
-                "🥗 Foods to Avoid",
-                expanded=True,
-            ):
-
-                display_list_items(
-                    foods_to_avoid,
-                    empty_message="No foods to avoid reported.",
-                )
-
-        with col2:
-
-            with st.expander(
-                "🥗 Dietary Restrictions",
-                expanded=True,
-            ):
-
-                display_list_items(
-                    dietary_restrictions,
-                    empty_message="No additional dietary restrictions.",
-                )
-
-            with st.expander(
-                "⚠️ Safety Considerations",
-                expanded=True,
-            ):
-
-                display_list_items(
-                    safety_flags,
-                    empty_message="No additional safety flags.",
-                )
-
-    # --------------------------------------------------------
-    # PROFESSIONAL ADVICE
-    # --------------------------------------------------------
-
-    professional_advice = (
-        get_bool(
-            assessment.get(
-                "professional_advice_recommended",
-                False,
-            )
-        )
-        or
-        get_bool(
-            safety_result.get(
-                "professional_advice_recommended",
-                False,
-            )
-        )
-    )
-
-    if professional_advice:
-
-        st.warning(
-            "👩‍⚕️ For health or medical concerns, please consult "
-            "a qualified healthcare professional or registered "
-            "dietitian for personalised advice."
-        )
-
-    # --------------------------------------------------------
-    # MEAL IDEAS
-    # --------------------------------------------------------
-
-    st.divider()
-
-    st.subheader("🍽️ Meal Ideas")
-
-    meal_categories = [
-        ("breakfast_ideas", "breakfast", "🍳 Breakfast"),
-        ("lunch_ideas", "lunch", "🥗 Lunch"),
-        ("snack_ideas", "snack", "🍎 Snacks"),
-        ("dinner_ideas", "dinner", "🍽️ Dinner"),
+    st.markdown('<div class="section-heading"><h2>Profile overview</h2><p>Based on your latest assessment</p></div>', unsafe_allow_html=True)
+    cols = st.columns(4)
+    metrics = [
+        ("Age group", user_data.get("age_group", "Not provided")),
+        ("Activity", user_data.get("activity_level", "Not provided")),
+        ("Diet", user_data.get("dietary_preference", "Not provided")),
+        ("Primary goal", user_data.get("goal", "Not provided")),
     ]
+    for col, (label, value) in zip(cols, metrics):
+        with col:
+            st.metric(label, value)
 
+    st.markdown('<div class="section-heading"><h2>Safety and assessment</h2><p>Reviewed before meal guidance</p></div>', unsafe_allow_html=True)
+    if safety_status == "professional_review_recommended":
+        st.warning("Professional review is recommended for condition-specific dietary advice.")
+    elif safety_status == "continue_with_caution":
+        st.warning("Continue with caution and seek professional advice where appropriate.")
+    else:
+        st.success("Dietary preferences and safety information have been considered.")
+
+    with st.expander("View personalised assessment", expanded=True):
+        st.write(assessment.get("profile_summary", "No assessment summary available."))
+        planning_considerations = assessment.get("planning_considerations", [])
+        if planning_considerations:
+            st.markdown("**Planning considerations**")
+            display_list_items(planning_considerations)
+
+    allergy_restrictions = safety_result.get("allergy_restrictions", [])
+    dietary_restrictions = safety_result.get("dietary_restrictions", [])
+    foods_to_avoid = safety_result.get("foods_to_avoid", [])
+    safety_flags = safety_result.get("safety_flags", [])
+    if allergy_restrictions or dietary_restrictions or foods_to_avoid or safety_flags:
+        left, right = st.columns(2)
+        with left:
+            with st.expander("Allergies", expanded=True):
+                display_list_items(allergy_restrictions, empty_message="No allergies reported.")
+            with st.expander("Foods to avoid", expanded=True):
+                display_list_items(foods_to_avoid, empty_message="No foods to avoid reported.")
+        with right:
+            with st.expander("Dietary restrictions", expanded=True):
+                display_list_items(dietary_restrictions, empty_message="No additional restrictions.")
+            with st.expander("Safety considerations", expanded=True):
+                display_list_items(safety_flags, empty_message="No additional safety flags.")
+
+    professional_advice = get_bool(assessment.get("professional_advice_recommended", False)) or get_bool(safety_result.get("professional_advice_recommended", False))
+    if professional_advice:
+        st.warning("For health or medical concerns, consult a qualified healthcare professional or registered dietitian for personalised advice.")
+
+    st.markdown('<div class="section-heading"><h2>Your meal ideas</h2><p>Regenerate any category for fresh options</p></div>', unsafe_allow_html=True)
+    meal_categories = [
+        ("breakfast_ideas", "breakfast", "Breakfast"),
+        ("lunch_ideas", "lunch", "Lunch"),
+        ("snack_ideas", "snack", "Snacks"),
+        ("dinner_ideas", "dinner", "Dinner"),
+    ]
     meal_tabs = st.tabs([label for _, _, label in meal_categories])
-
-    for tab, (guidance_key, meal_label, display_label) in zip(
-        meal_tabs, meal_categories
-    ):
-
+    for tab, (guidance_key, meal_label, display_label) in zip(meal_tabs, meal_categories):
         with tab:
-
             current_ideas = guidance.get(guidance_key, [])
-
-            display_list_items(
-                current_ideas,
-                empty_message="No ideas available yet.",
-                card_style=True,
-            )
-
-            if st.button(
-                f"🔄 Get different {meal_label} ideas",
-                key=f"regen_{meal_label}",
-                use_container_width=True,
-            ):
-
+            display_list_items(current_ideas, empty_message="No ideas available yet.", card_style=True)
+            if st.button(f"Regenerate {meal_label} ideas", key=f"regen_{meal_label}", use_container_width=True):
                 with st.spinner(f"Finding new {meal_label} ideas..."):
-
                     try:
-
-                        new_ideas = regenerate_meal_ideas(
-                            display_label.split(" ", 1)[-1].lower(),
-                            guidance_key,
-                            current_ideas,
-                        )
-
+                        new_ideas = regenerate_meal_ideas(display_label.lower(), guidance_key, current_ideas)
                         if new_ideas:
-
                             guidance[guidance_key] = new_ideas
-
                             st.session_state.guidance = guidance
-
-                            st.session_state.workflow_context[
-                                "guidance"
-                            ] = guidance
-
+                            st.session_state.workflow_context["guidance"] = guidance
                             st.rerun()
-
                         else:
-
-                            st.warning(
-                                "Couldn't get new ideas this time — "
-                                "please try again."
-                            )
-
+                            st.warning("Couldn't get new ideas this time — please try again.")
                     except Exception as error:
-
                         show_ai_error(error)
 
-    # --------------------------------------------------------
-    # NUTRITION TIPS
-    # --------------------------------------------------------
+    st.markdown('<div class="section-heading"><h2>Everyday nutrition tips</h2><p>Small actions for steady progress</p></div>', unsafe_allow_html=True)
+    display_list_items(guidance.get("nutrition_tips", []), empty_message="No nutrition tips available.")
 
-    st.divider()
+    important_safety_note = guidance.get("important_safety_note", "These suggestions are general nutrition guidance.")
+    st.info(important_safety_note)
+    st.caption("For medical conditions or personalised dietary treatment, consult a qualified healthcare professional or registered dietitian.")
 
-    st.subheader("💡 General Nutrition Tips")
-
-    display_list_items(
-        guidance.get(
-            "nutrition_tips",
-            [],
-        ),
-        empty_message="No nutrition tips available.",
-    )
-
-    # --------------------------------------------------------
-    # IMPORTANT SAFETY MESSAGE
-    # --------------------------------------------------------
-
-    st.divider()
-
-    important_safety_note = guidance.get(
-        "important_safety_note",
-        "These suggestions are general nutrition guidance.",
-    )
-
-    st.info(
-        important_safety_note
-    )
-
-    st.info(
-        "🥗 For medical conditions or personalised dietary "
-        "treatment, consult a qualified healthcare professional "
-        "or registered dietitian."
-    )
-
-    # --------------------------------------------------------
-    # DOWNLOAD REPORT
-    # --------------------------------------------------------
-
-    st.divider()
-
-    st.subheader("📥 Your Report")
-
-    st.write(
-        "Download your current nutrition assessment and "
-        "AI-generated guidance as a PDF."
-    )
-
+    st.markdown('<div class="section-heading"><h2>Your report</h2><p>Save a copy for easy reference</p></div>', unsafe_allow_html=True)
     try:
+        pdf_data = create_pdf_report(user_data, assessment, safety_result, guidance)
+        st.download_button(label="Download nutrition report", data=pdf_data, file_name="NutriGuide_AI_Report.pdf", mime="application/pdf", type="primary", use_container_width=True, key="download_nutrition_report")
+    except Exception:
+        st.error("The PDF report could not be generated. Please try again.")
 
-        pdf_data = create_pdf_report(
-            user_data,
-            assessment,
-            safety_result,
-            guidance,
-        )
-
-        st.download_button(
-            label="📥 Download Nutrition Report",
-            data=pdf_data,
-            file_name="NutriGuide_AI_Report.pdf",
-            mime="application/pdf",
-            type="primary",
-            use_container_width=True,
-            key="download_nutrition_report",
-        )
-
-    except Exception as error:
-
-        st.error(
-            "⚠️ The PDF report could not be generated."
-        )
-
-        st.caption(
-            "Please try again. If the problem continues, "
-            "check the application terminal for the error."
-        )
-
-    # --------------------------------------------------------
-    # ACTION BUTTONS
-    # --------------------------------------------------------
-
-    st.divider()
-
+    st.write("")
     col1, col2 = st.columns(2)
-
     with col1:
-
-        if st.button(
-            "🔄 Create New Assessment",
-            type="primary",
-            use_container_width=True,
-            key="create_new_assessment_results",
-        ):
-
+        if st.button("Create new assessment", type="primary", use_container_width=True, key="create_new_assessment_results"):
             reset_app()
-
             st.session_state.page = "assessment"
-
             st.rerun()
-
     with col2:
-
-        if st.button(
-            "🏠 Back to Home",
-            use_container_width=True,
-            key="back_to_home_results",
-        ):
-
+        if st.button("Back to home", use_container_width=True, key="back_to_home_results"):
             reset_app()
-
             st.session_state.page = "home"
-
             st.rerun()
 
-    st.markdown(
-        """
-        <div class="app-footer">
-            NutriGuide AI • General educational nutrition guidance
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    st.markdown('<div class="app-footer">NutriGuide AI · General educational nutrition guidance</div>', unsafe_allow_html=True)
 
 
 # ============================================================
