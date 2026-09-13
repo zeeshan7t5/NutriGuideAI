@@ -117,6 +117,7 @@ st.markdown(
             --line: #484848;
             --focus: rgba(255, 96, 37, 0.28);
             --glass: #1c1c1c;
+            --brandbar-height: 4.5rem;
             color-scheme: dark;
         }
 
@@ -129,7 +130,9 @@ st.markdown(
         }
         header[data-testid="stHeader"], [data-testid="stToolbar"], #MainMenu { display:none !important; }
         footer { visibility:hidden; }
-        .block-container { max-width: 1180px; padding: 2.25rem 2rem 4rem; position: relative; }
+        .block-container { max-width:1180px; padding:calc(var(--brandbar-height) + 1.25rem) 2rem 4rem !important; position:relative; }
+        [data-testid="stMain"], [data-testid="stAppViewContainer"] { scroll-padding-top:calc(var(--brandbar-height) + 1rem); }
+        .stApp :is(h1, h2, h3, h4, h5, h6, input, textarea, button, [tabindex]) { scroll-margin-top:calc(var(--brandbar-height) + 1rem); }
         h1, h2, h3, h4, h5, h6 { font-family: "Space Grotesk", sans-serif; color: var(--ink); letter-spacing: 0; }
         h1 { font-size: clamp(2rem, 4vw, 3.25rem); line-height: 1.08; font-weight: 700; }
         h2, h3 { font-weight: 600; }
@@ -137,8 +140,14 @@ st.markdown(
         p, label, .stMarkdown { color: var(--ink); }
         hr { border-color: var(--line); margin: 1.6rem 0; }
 
-        .brandbar { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:2rem; }
-        .brand { display:flex; align-items:center; gap:.75rem; font:700 1.12rem "Space Grotesk",sans-serif; }
+        .brandbar {
+            position:fixed; top:0; left:0; right:0; z-index:1000;
+            display:flex; align-items:center; justify-content:space-between; gap:1rem;
+            box-sizing:border-box; height:var(--brandbar-height); margin:0;
+            padding:0 clamp(1rem,3vw,2rem); background:var(--paper); color:var(--ink);
+            border-bottom:1px solid var(--line); box-shadow:0 4px 18px rgba(0,0,0,.22);
+        }
+        .brand { display:flex; align-items:center; gap:.75rem; white-space:nowrap; font:700 1.12rem "Space Grotesk",sans-serif; }
         .brand-mark { width:2.25rem; height:2.25rem; display:grid; place-items:center; border-radius:.75rem; background:var(--leaf); color:var(--on-accent); }
         .status-chip { display:inline-flex; align-items:center; gap:.5rem; padding:.45rem .75rem; border-radius:999px; background:var(--mint); color:var(--leaf); font-size:.78rem; font-weight:700; border:1px solid var(--line); }
         .status-chip::before { content:""; width:.42rem; height:.42rem; border-radius:50%; background:var(--leaf); }
@@ -237,9 +246,10 @@ st.markdown(
         .hero-panel, div[data-testid="stMetric"] { animation:ng-fade .5s ease both; }
         @media (prefers-reduced-motion:reduce) { *, *::before, *::after { animation:none !important; transition:none !important; } }
         @media (max-width:760px) {
-            .block-container { padding:1.2rem 1rem 3rem; }
+            :root { --brandbar-height:4rem; }
+            .block-container { padding:calc(var(--brandbar-height) + 1rem) 1rem 3rem !important; }
             .hero-grid { grid-template-columns:1fr; }
-            .brandbar { align-items:flex-start; }
+            .brandbar { padding:0 1rem; }
             .status-chip { display:none; }
             .feature-card, .step-card { min-height:auto; }
             .wizard-labels { grid-template-columns:repeat(2,1fr); gap:.75rem; }
@@ -898,7 +908,7 @@ def create_pdf_report(user_data, assessment, safety_result, nutrition, guidance)
 def show_home():
     st.markdown(
         """
-        <div class="brandbar">
+        <div class="brandbar" role="banner" aria-label="NutriGuide AI">
             <div class="brand"><span class="brand-mark">n</span>NutriGuide <span style="color:var(--leaf)">AI</span></div>
             <span class="status-chip">Personalized nutrition MVP</span>
         </div>
@@ -966,7 +976,7 @@ def show_wizard_progress(current):
 
 def show_assessment():
     st.markdown(
-        '<div class="brandbar"><div class="brand"><span class="brand-mark">n</span>NutriGuide <span style="color:var(--leaf)">AI</span></div><span class="status-chip">Private assessment</span></div>',
+        '<div class="brandbar" role="banner" aria-label="NutriGuide AI"><div class="brand"><span class="brand-mark">n</span>NutriGuide <span style="color:var(--leaf)">AI</span></div><span class="status-chip">Private assessment</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown('<div class="eyebrow">Personal nutrition profile</div>', unsafe_allow_html=True)
@@ -1269,7 +1279,7 @@ def show_results():
     guidance = st.session_state.guidance
 
     st.markdown(
-        f'<div class="brandbar"><div class="brand"><span class="brand-mark">n</span>NutriGuide <span style="color:var(--leaf)">AI</span></div><span class="status-chip">{("Review advised" if safety.get("status") != "safe_to_continue" else "Safety reviewed")}</span></div>',
+        f'<div class="brandbar" role="banner" aria-label="NutriGuide AI"><div class="brand"><span class="brand-mark">n</span>NutriGuide <span style="color:var(--leaf)">AI</span></div><span class="status-chip">{("Review advised" if safety.get("status") != "safe_to_continue" else "Safety reviewed")}</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown('<div class="eyebrow">Your nutrition dashboard</div>', unsafe_allow_html=True)
