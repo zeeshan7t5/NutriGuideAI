@@ -77,6 +77,7 @@ DEFAULT_STATE = {
     "guidance": {},
     "workflow_context": {},
     "wizard_step": 0,
+    "wizard_validation_step": None,
     "wizard_data": {},
 }
 
@@ -241,6 +242,8 @@ st.markdown(
         .wizard-step.done { color:var(--teal); }
         .app-footer { text-align:center; padding:2rem 0 .5rem; color:var(--muted); font-size:.78rem; }
         .small-note { font-size:.84rem; color:var(--muted); }
+        .field-note { font-size:.78rem; line-height:1.4; color:var(--muted); margin:-.4rem 0 .25rem; }
+        .field-note.field-note--error { color:var(--alert); }
 
         @keyframes ng-fade { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
         .hero-panel, div[data-testid="stMetric"] { animation:ng-fade .5s ease both; }
@@ -573,51 +576,62 @@ DURATION_OPTIONS = [7, 14, 30, 60, 90]
 
 
 def validate_user_data(data, step=None):
-    errors = []
+    errors = {}
     if step in (None, 0):
         age = safe_float(data.get("age"))
         height = safe_float(data.get("height_cm"))
         weight = safe_float(data.get("weight_kg"))
         if not 18 <= age <= 100 or not age.is_integer():
-            errors.append("Enter your age as a whole number between 18 and 100.")
+            errors["age"] = "This field is required." if data.get("age") in (None, "") else "Enter a whole number between 18 and 100."
         if not 120 <= height <= 230:
-            errors.append("Enter your height between 120 and 230 cm.")
+            errors["height_cm"] = "This field is required." if data.get("height_cm") in (None, "") else "Enter a height between 120 and 230 cm."
         if not 25 <= weight <= 300:
-            errors.append("Enter your weight between 25 and 300 kg.")
+            errors["weight_kg"] = "This field is required." if data.get("weight_kg") in (None, "") else "Enter a weight between 25 and 300 kg."
         if data.get("sex") not in SEX_OPTIONS:
-            errors.append("Select your sex for the nutrition calculation.")
+            errors["sex"] = "Required — select an option."
         if data.get("activity_level") not in ACTIVITY_OPTIONS:
-            errors.append("Select your physical activity level.")
+            errors["activity_level"] = "Required — select your activity level."
 
     if step in (None, 1):
         if data.get("has_medical_condition") not in HEALTH_OPTIONS:
-            errors.append("Answer the medical-condition question; choose Not sure if uncertain.")
+            errors["has_medical_condition"] = "Required — select Yes, No, or Not sure."
         if data.get("has_medical_condition") == "Yes":
             conditions = data.get("medical_conditions") or []
             if not conditions:
-                errors.append("Select at least one medical condition when answering Yes.")
+                errors["medical_conditions"] = "Required — select at least one condition."
             if "Other" in conditions and not str(data.get("other_condition") or "").strip():
-                errors.append("Describe the other medical condition.")
+                errors["other_condition"] = "Required — specify the other condition."
         if data.get("taking_medication") not in HEALTH_OPTIONS:
-            errors.append("Answer the medication question; choose Not sure if uncertain.")
+            errors["taking_medication"] = "Required — select Yes, No, or Not sure."
         if data.get("taking_medication") == "Yes":
             names = data.get("medication_names") or ""
             if isinstance(names, str):
                 names = names.replace("\n", ",").split(",")
             if not any(str(name).strip() for name in names):
-                errors.append("Enter at least one medication name when answering Yes.")
+                errors["medication_names"] = "Required — enter at least one medication name."
 
     if step in (None, 2):
         if data.get("goal") not in GOAL_OPTIONS:
-            errors.append("Select your primary nutrition goal.")
+            errors["goal"] = "Required — select your nutrition goal."
         if not str(data.get("food_allergies") or "").strip():
-            errors.append("List your food allergies, or enter None or Not sure.")
+            errors["food_allergies"] = "Required — list allergies, or enter None or Not sure."
 
     if step in (None, 3):
         duration = safe_float(data.get("duration_days"))
         if not 1 <= duration <= 365 or not duration.is_integer():
-            errors.append("Choose a plan duration or enter a whole number between 1 and 365 days.")
+            errors["duration_days"] = "This field is required." if data.get("duration_days") in (None, "") else "Enter a whole number between 1 and 365 days."
     return errors
+
+
+
+def show_required_field_messages(placeholders, errors):
+    for field, placeholder in placeholders.items():
+        message = errors.get(field, "Required")
+        error_class = " field-note--error" if field in errors else ""
+        placeholder.markdown(
+            f'<p class="field-note{error_class}" role="status" aria-live="polite">{escape(message)}</p>',
+            unsafe_allow_html=True,
+        )
 
 
 def nutrition_prompt_context(user_data, assessment, safety, nutrition):
@@ -987,6 +1001,7 @@ def show_assessment():
 
     current = st.session_state.wizard_step
     data = st.session_state.wizard_data
+    field_messages = {}
     show_wizard_progress(current)
 
     if current == 0:
@@ -994,21 +1009,27 @@ def show_assessment():
         c1, c2 = st.columns(2)
         with c1:
             data["age"] = st.number_input("Age *", min_value=18, max_value=100, value=data.get("age"), step=1, placeholder="Enter your age")
+            field_messages["age"] = st.empty()
             data["height_cm"] = st.number_input("Height (cm) *", min_value=120.0, max_value=230.0, value=data.get("height_cm"), step=0.5, placeholder="Enter your height")
+            field_messages["height_cm"] = st.empty()
         with c2:
             data["sex"] = st.selectbox("Sex *", SEX_OPTIONS, index=SEX_OPTIONS.index(data["sex"]) if data.get("sex") in SEX_OPTIONS else None, placeholder="Select an option")
+            field_messages["sex"] = st.empty()
             data["weight_kg"] = st.number_input("Weight (kg) *", min_value=25.0, max_value=300.0, value=data.get("weight_kg"), step=0.5, placeholder="Enter your weight")
+            field_messages["weight_kg"] = st.empty()
         activity_options = ACTIVITY_OPTIONS
         data["activity_level"] = st.selectbox("Physical activity level *", activity_options, index=activity_options.index(data["activity_level"]) if data.get("activity_level") in activity_options else None, placeholder="Select your activity level")
+        field_messages["activity_level"] = st.empty()
         st.caption("BMR/TDEE calculations use Mifflin–St Jeor and the selected activity factor.")
         _, nxt = st.columns([3,1])
         with nxt:
             if st.button("Continue", type="primary", use_container_width=True, key="wizard_next_0"):
                 errors = validate_user_data(data, step=0)
                 if errors:
-                    for error in errors:
-                        st.error(error)
+                    st.session_state.wizard_validation_step = current
+                    show_required_field_messages(field_messages, errors)
                     return
+                st.session_state.wizard_validation_step = None
                 st.session_state.wizard_step = 1
                 st.rerun()
 
@@ -1022,6 +1043,7 @@ def show_assessment():
             health_options, index=health_options.index(data["has_medical_condition"]) if data.get("has_medical_condition") in health_options else None,
             horizontal=True
         )
+        field_messages["has_medical_condition"] = st.empty()
         condition_options = [
             "Diabetes", "Hypertension", "Cardiovascular disease", "Kidney disease",
             "Liver disease", "Gastrointestinal condition", "Thyroid disorder", "Anemia", "Other"
@@ -1032,8 +1054,10 @@ def show_assessment():
                 condition_options,
                 default=data.get("medical_conditions", [])
             )
+            field_messages["medical_conditions"] = st.empty()
             if "Other" in data["medical_conditions"]:
                 data["other_condition"] = st.text_input("Specify other condition *", value=data.get("other_condition", ""))
+                field_messages["other_condition"] = st.empty()
         else:
             data["medical_conditions"] = []
 
@@ -1043,12 +1067,14 @@ def show_assessment():
             health_options, index=health_options.index(data["taking_medication"]) if data.get("taking_medication") in health_options else None,
             horizontal=True
         )
+        field_messages["taking_medication"] = st.empty()
         if data["taking_medication"] == "Yes":
             st.caption("You may enter multiple medications. Strength and frequency are optional.")
             medication_names = data.get("medication_names", "")
             if isinstance(medication_names, list):
                 medication_names = ", ".join(medication_names)
             data["medication_names"] = st.text_area("Medication name(s) *", value=medication_names, placeholder="Example: metformin, losartan")
+            field_messages["medication_names"] = st.empty()
             data["medication_strengths"] = st.text_area("Strength / dose (optional)", value=data.get("medication_strengths", ""), placeholder="Example: 500 mg")
             data["medication_frequency"] = st.text_area("Frequency (optional)", value=data.get("medication_frequency", ""), placeholder="Example: twice daily")
         else:
@@ -1065,9 +1091,10 @@ def show_assessment():
             if st.button("Continue", type="primary", use_container_width=True, key="wizard_next_1"):
                 errors = validate_user_data(data, step=1)
                 if errors:
-                    for error in errors:
-                        st.error(error)
+                    st.session_state.wizard_validation_step = current
+                    show_required_field_messages(field_messages, errors)
                     return
+                st.session_state.wizard_validation_step = None
                 st.session_state.wizard_step = 2
                 st.rerun()
 
@@ -1075,6 +1102,7 @@ def show_assessment():
         st.subheader("Goal & dietary preferences")
         goal_options = GOAL_OPTIONS
         data["goal"] = st.selectbox("Primary nutrition goal *", goal_options, index=goal_options.index(data["goal"]) if data.get("goal") in goal_options else None, placeholder="Select your goal")
+        field_messages["goal"] = st.empty()
         dietary_options = ["No specific preference", "Vegetarian", "Vegan", "Halal", "Other"]
         data["dietary_preference"] = st.selectbox("Dietary preference (optional)", dietary_options, index=dietary_options.index(data.get("dietary_preference", "No specific preference")))
         if data["dietary_preference"] == "Other":
@@ -1083,6 +1111,7 @@ def show_assessment():
         c1, c2 = st.columns(2)
         with c1:
             data["food_allergies"] = st.text_area("Food allergies *", value=data.get("food_allergies", ""), placeholder="List allergies, or enter None / Not sure", help="An explicit response is required so a blank field is not mistaken for no allergies.")
+            field_messages["food_allergies"] = st.empty()
             data["dietary_restrictions"] = st.text_area("Dietary restrictions (optional)", value=data.get("dietary_restrictions", ""), placeholder="Example: low sodium, gluten-free")
         with c2:
             data["foods_to_avoid"] = st.text_area("Foods you dislike or want to avoid (optional)", value=data.get("foods_to_avoid", ""), placeholder="Example: fish, very spicy foods")
@@ -1097,9 +1126,10 @@ def show_assessment():
             if st.button("Continue", type="primary", use_container_width=True, key="wizard_next_2"):
                 errors = validate_user_data(data, step=2)
                 if errors:
-                    for error in errors:
-                        st.error(error)
+                    st.session_state.wizard_validation_step = current
+                    show_required_field_messages(field_messages, errors)
                     return
+                st.session_state.wizard_validation_step = None
                 st.session_state.wizard_step = 3
                 st.rerun()
 
@@ -1113,6 +1143,7 @@ def show_assessment():
             index=duration_options.index(preset_duration) if preset_duration in duration_options else None,
             format_func=lambda x: f"{x} days"
         )
+        preset_duration_message = st.empty()
         data["preset_duration_days"] = selected
         data["duration_days"] = selected
         custom = st.checkbox("Use a custom duration instead", value=data.get("use_custom_duration", False), key="use_custom_duration")
@@ -1122,7 +1153,10 @@ def show_assessment():
                 "Custom duration (days) *", min_value=1, max_value=365,
                 value=data.get("custom_duration_days"), step=1, placeholder="Enter number of days"
             )
+            field_messages["duration_days"] = st.empty()
             data["custom_duration_days"] = data["duration_days"]
+        else:
+            field_messages["duration_days"] = preset_duration_message
 
         st.info("Choose a preset duration or enable custom duration and enter 1–365 days. Only one duration is required.")
         st.markdown('<div class="notice"><strong>Safety first.</strong> Medical and medication information is considered for context only. NutriGuide AI never recommends starting, stopping, or changing medication.</div>', unsafe_allow_html=True)
@@ -1134,12 +1168,17 @@ def show_assessment():
                 st.rerun()
         with submit:
             if st.button("Generate my personalized plan", type="primary", use_container_width=True, key="wizard_submit"):
-                errors = validate_user_data(data)
-                if errors:
-                    st.error("Complete the required fields before generating a plan. Use Back to review earlier steps if needed.")
-                    for error in errors:
-                        st.error(error)
-                    return
+                for step in range(len(WIZARD_STEPS)):
+                    errors = validate_user_data(data, step=step)
+                    if errors:
+                        st.session_state.wizard_validation_step = step
+                        if step != current:
+                            st.session_state.wizard_step = step
+                            st.rerun()
+                            return
+                        show_required_field_messages(field_messages, errors)
+                        return
+                st.session_state.wizard_validation_step = None
                 conditions = list(data.get("medical_conditions", []))
                 if "Other" in conditions and data.get("other_condition", "").strip():
                     conditions = [x for x in conditions if x != "Other"] + [data["other_condition"].strip()]
@@ -1173,6 +1212,9 @@ def show_assessment():
                 }
                 st.session_state.user_data = user_data
                 run_ai_workflow(user_data)
+
+    errors = validate_user_data(data, step=current) if st.session_state.get("wizard_validation_step") == current else {}
+    show_required_field_messages(field_messages, errors)
 
 
 # ============================================================
