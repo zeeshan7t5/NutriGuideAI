@@ -234,7 +234,9 @@ def clean_json_response(text):
 
 
 def generate_ai_response(prompt, retries=3, temperature=0.3):
-    """Call Groq with controlled retries and friendly error codes."""
+    """Call Groq GPT-OSS reliably, with JSON mode and useful diagnostics."""
+    last_error = None
+
     for attempt in range(retries):
         try:
             response = client.chat.completions.create(
@@ -244,33 +246,104 @@ def generate_ai_response(prompt, retries=3, temperature=0.3):
                         "role": "system",
                         "content": (
                             "You are NutriGuide AI, a careful nutrition-support "
-                            "assistant. Follow the supplied safety constraints exactly."
+                            "assistant. Follow the supplied safety constraints exactly. "
+                            "Return valid JSON whenever the user requests JSON."
                         ),
                     },
                     {"role": "user", "content": prompt},
                 ],
                 temperature=temperature,
+                # GPT-OSS exposes reasoning separately. Disabling it prevents
+                # the application from mistaking an empty content field for
+                # a failed generation.
+                include_reasoning=False,
+                reasoning_effort="low",
+                response_format={"type": "json_object"},
             )
-            content = response.choices[0].message.content
-            if not content:
-                raise RuntimeError("EMPTY_RESPONSE")
-            return content
+
+            if not response.choices:
+                raise RuntimeError("Groq returned no choices.")
+
+            message_obj = response.choices[0].message
+            content = getattr(message_obj, "content", None)
+
+            if content and str(content).strip():
+                return str(content).strip()
+
+            # Some SDK/model responses may expose text through a different
+            # field, so inspect common alternatives before failing.
+            for field in ("text", "output_text"):
+                alternative = getattr(response, field, None)
+                if alternative and str(alternative).strip():
+                    return str(alternative).strip()
+
+            finish_reason = getattr(response.choices[0], "finish_reason", None)
+            raise RuntimeError(
+                f"Groq returned an empty content field "
+                f"(finish_reason={finish_reason})."
+            )
+
         except Exception as error:
+            last_error = error
             message = str(error).lower()
+
             if "401" in message or "unauthorized" in message or "api key" in message:
                 raise RuntimeError("INVALID_API_KEY") from error
+
             if "429" in message or "rate_limit" in message or "quota" in message:
                 raise RuntimeError("API_QUOTA_EXCEEDED") from error
-            if "503" in message or "unavailable" in message:
+
+            if "400" in message and (
+                "response_format" in message
+                or "json" in message
+                or "reasoning" in message
+            ):
+                # Retry once without optional GPT-OSS controls. This protects
+                # the app from SDK/version differences while keeping JSON prompts.
+                try:
+                    fallback = client.chat.completions.create(
+                        model=MODEL_NAME,
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": (
+                                    "You are NutriGuide AI. Follow the safety "
+                                    "constraints exactly and return valid JSON."
+                                ),
+                            },
+                            {"role": "user", "content": prompt},
+                        ],
+                        temperature=temperature,
+                    )
+                    fallback_content = getattr(
+                        fallback.choices[0].message, "content", None
+                    )
+                    if fallback_content and str(fallback_content).strip():
+                        return str(fallback_content).strip()
+                except Exception as fallback_error:
+                    last_error = fallback_error
+                    message = str(fallback_error).lower()
+
+            if "503" in message or "unavailable" in message or "timeout" in message:
                 if attempt < retries - 1:
                     time.sleep(2)
                     continue
-                raise RuntimeError("GROQ_TEMPORARILY_UNAVAILABLE") from error
+
             if attempt < retries - 1:
                 time.sleep(1)
                 continue
-            raise RuntimeError(f"RAW_ERROR: {message}") from error
-    raise RuntimeError("RAW_ERROR: max retries exceeded")
+
+            # Preserve the real provider error instead of reporting only
+            # "empty_response".
+            raise RuntimeError(
+                f"RAW_ERROR: {str(last_error).strip() or 'Unknown Groq error'}"
+            ) from error
+
+    raise RuntimeError(
+        f"RAW_ERROR: {str(last_error).strip() or 'Max retries exceeded'}"
+    )
+
+
 
 
 def show_ai_error(error):
@@ -863,7 +936,7 @@ def show_assessment():
         )
         if data["taking_medication"] == "Yes":
             st.caption("You may enter multiple medications. Strength and frequency are optional.")
-            data["medication_names"] = st.text_area("Medication name(s)", value=data.get("medication_names_text", ""), placeholder="Example: metformin, losartan")
+            data["medication_names"] = st.text_area("Medication name(s)", value=", ".join(data.get("medication_names", [])), placeholder="Example: metformin, losartan")
             data["medication_strengths"] = st.text_area("Strength / dose, if known", value=data.get("medication_strengths", ""), placeholder="Example: 500 mg")
             data["medication_frequency"] = st.text_area("Frequency, if known", value=data.get("medication_frequency", ""), placeholder="Example: twice daily")
         else:
@@ -918,7 +991,8 @@ def show_assessment():
             format_func=lambda x: f"{x} days"
         )
         data["duration_days"] = selected
-        custom = st.checkbox("Use a custom duration instead")
+        custom = st.checkbox("Use a custom duration instead", value=data.get("use_custom_duration", False), key="use_custom_duration")
+        data["use_custom_duration"] = custom
         if custom:
             data["duration_days"] = st.number_input(
                 "Custom duration (days)", min_value=1, max_value=365,
